@@ -4,7 +4,7 @@
 \description{Interface to lp\_solve linear/integer programming system}
 \usage{
 lp (direction = "min", objective.in, const.mat, const.dir, const.rhs,
-	transpose.constraints = TRUE, int.vec)
+	transpose.constraints = TRUE, int.vec, presolve=0, compute.sens=0)
 }
 \arguments{
 \item{direction}{Character string giving direction of optimization:
@@ -25,6 +25,10 @@ transpose.constraints to FALSE.}
 \item{int.vec}{Numeric vector giving the indices of variables that are 
 required to be integer. The length of this vector will therefore be the 
 number of integer variables.}
+\item{presolve}{Numeric: presolve? Default 0 (no); any
+non-zero value means "yes." Currently ignored.}
+\item{compute.sens}{Numeric: compute sensitivity? Default 0 (no); any
+non-zero value means "yes."}
 }
 \details{
 This function calls the lp\_solve 4.0 solver. That system has many options not
@@ -55,11 +59,38 @@ lp ("max", f.obj, f.con, f.dir, f.rhs)
 lp ("max", f.obj, f.con, f.dir, f.rhs)$solution
 \dontrun{[1] 0.0 4.5 0.0}
 #
+# Get sensitivities
+#
+lp ("max", f.obj, f.con, f.dir, f.rhs, compute.sens=TRUE)$sens.coef.from
+\dontrun{[1] -1e+30  2e+00 -1e+30}
+lp ("max", f.obj, f.con, f.dir, f.rhs, compute.sens=TRUE)$sens.coef.to  
+\dontrun{[1] 4.50e+00 1.00e+30 1.35e+01}
+#
+# Right now the dual values for the constraints and the variables are
+# combined, constraints coming first. So in this example...
+#
+lp ("max", f.obj, f.con, f.dir, f.rhs, compute.sens=TRUE)$duals     
+\dontrun{[1]   4.5   0.0  -3.5   0.0 -10.5}
+#
+# ...the duals of the constraints are 4.5 and 0, and of the variables,
+# -3.5, 0.0, -10.5. Here are the lower and upper limits on these:
+#
+lp ("max", f.obj, f.con, f.dir, f.rhs, compute.sens=TRUE)$duals.from
+\dontrun{[1]  0e+00 -1e+30 -1e+30 -1e+30 -6e+00}
+lp ("max", f.obj, f.con, f.dir, f.rhs, compute.sens=TRUE)$duals.to  
+\dontrun{[1] 1.5e+01 1.0e+30 3.0e+00 1.0e+30 3.0e+00}
+#
 # Run again, this time requiring that all three variables be integer
 #
 lp ("max", f.obj, f.con, f.dir, f.rhs, int.vec=1:3)
 \dontrun{Success: the objective function is 37}
 lp ("max", f.obj, f.con, f.dir, f.rhs, int.vec=1:3)$solution
 \dontrun{[1] 1 4 0}
+#
+# You can get sensitivities in the integer case, but they're harder to
+# interpret.
+#
+lp ("max", f.obj, f.con, f.dir, f.rhs, int.vec=1:3, compute.sens=TRUE)$duals
+\dontrun{[1] 1 0 0 7 0}
 }
 \keyword{optimize}

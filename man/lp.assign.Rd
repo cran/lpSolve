@@ -4,11 +4,15 @@
 \description{Interface to lp\_solve linear/integer programming
 system specifically for solving assignment problems}
 \usage{
-lp.assign (cost.mat)
+lp.assign (cost.mat, presolve=0, compute.sens=0)
 }
 \arguments{
 \item{cost.mat}{Matrix of costs: the ij-th element is the cost of 
 assigning source i to destination j.}
+\item{presolve}{Numeric: presolve? Default 0 (no); any
+non-zero value means "yes." Currently ignored.}
+\item{compute.sens}{Numeric: compute sensitivity? Default 0 (no); any
+non-zero value means "yes."}
 }
 \details{
 This is a particular integer programming problem. All the decision variables

@@ -44,7 +44,7 @@ void *_Fortify_malloc __OF((size_t size, char *file, unsigned long line));
 void *_Fortify_realloc __OF((void *ptr, size_t new_size, char *file, unsigned long line));
 void *_Fortify_calloc __OF((size_t nitems, size_t size, char *file, unsigned long line));
 char *_Fortify_strdup __OF((char *str, char *file, unsigned long line));
-char *_Fortify_getcwd __OF((char *buf, size_t size, char *file, unsigned long line));
+char *_Fortify_getcwd __OF((char *buf, int size, char *file, unsigned long line));
 char *_Fortify_tempnam __OF((char *dir, char *pfx, char *file, unsigned long line));
 void  _Fortify_free __OF((void *uptr, char *file, unsigned long line));
 

@@ -1,4 +1,4 @@
-lp.transport <- function(cost.mat, row.signs, row.rhs, col.signs, col.rhs)
+lp.transport <- function(cost.mat, row.signs, row.rhs, col.signs, col.rhs, presolve = 0, compute.sens = 0)
 {
 	#
 	# lp.transport: use lpsolve.dll to solve a transportation problem. This is a linear program
@@ -9,6 +9,10 @@ lp.transport <- function(cost.mat, row.signs, row.rhs, col.signs, col.rhs)
 	#             row.rhs: values for row constraints
 	#           col.signs: signs for column constraints
 	#             col.rhs: values for column constraints
+	#            presolve: Numeric: should we presolve? Default 0 (no); non-0
+	#                      values means "yes." Currently mostly ignored.
+	#        compute.sens: Numeric: compute sensitivities? Default 0 (no);
+	#                      non-zero value means "yes."
 	#
 	# Return value: list from lpsolve, including objective and optimal values.
 	#
@@ -106,6 +110,15 @@ lp.transport <- function(cost.mat, row.signs, row.rhs, col.signs, col.rhs)
 	objval <- as.double(0.)
 	solution <- as.double(numeric(nc * nr))
 	status <- as.double(0.)
+	#
+	# Set up sensitivity stuff
+	#
+	sens.coef.from <- sens.coef.to <- 0
+	duals <- duals.from <- duals.to <- 0
+	if(compute.sens) {
+		sens.coef.from <- sens.coef.to <- numeric(x.count)
+		duals <- duals.from <- duals.to <- numeric(x.count + const.count)
+	}
 	lps.out <- .C("lpslink",
 		direction = direction,
 		varcount = varcount,
@@ -116,8 +129,27 @@ lp.transport <- function(cost.mat, row.signs, row.rhs, col.signs, col.rhs)
 		intvec = intvec,
 		objval = objval,
 		solution = solution,
+		presolve = as.integer(presolve),
+		compute.sens = as.integer(compute.sens),
+		sens.coef.from = as.double(sens.coef.from),
+		sens.coef.to = as.double(sens.coef.to),
+		duals = as.double(duals),
+		duals.from = as.double(duals.from),
+		duals.to = as.double(duals.to),
 		status = status, PACKAGE="lpSolve")
+	#
+	# Make stuff that should be matices into matrices
+	#
 	lps.out$solution = matrix(lps.out$solution, nr, nc, byrow = TRUE)
+	if(length(duals) > 0) {
+		lps.out$sens.coef.from <- matrix(lps.out$sens.coef.from, nr, nc, byrow =
+			TRUE)
+		lps.out$sens.coef.to <- matrix(lps.out$sens.coef.to, nr, nc, byrow = TRUE
+			)
+		lps.out$duals <- matrix(lps.out$duals, nr, nc, byrow = TRUE)
+		lps.out$duals.from <- matrix(lps.out$duals.from, nr, nc, byrow = TRUE)
+		lps.out$duals.to <- matrix(lps.out$duals.to, nr, nc, byrow = TRUE)
+	}
 	if(any(names(version) == "language"))
 		class(lps.out) <- "lp"
 	else oldClass(lps.out) <- "lp"
