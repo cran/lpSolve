@@ -1,4 +1,4 @@
 lp.R                    Solve linear or mixed integer linear programs
 lp.assign.R             Solve the assignment problem
-lp.transport.R          solve the transportation problem
+lp.transport.R          Solve the transportation problem
 print.lp                Print an lp object

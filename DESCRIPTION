@@ -1,6 +1,6 @@
 Package: lpSolve
-Version: 1.0.0
-Date: 2003-08-01
+Version: 1.0.1
+Date: 2004-04-05
 Title: Interface to Lp_solve to solve linear/integer programs
 Author: Michel Berkelaar
 Maintainer: Sam Buttrey <buttrey@nps.navy.mil>

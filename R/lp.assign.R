@@ -80,7 +80,7 @@ lp.assign <- function(cost.mat)
 		intvec = intvec,
 		objval = objval,
 		solution = solution,
-		status = status)
+		status = status, PACKAGE="lpSolve")
 	lps.out$solution = matrix(lps.out$solution, nr, nc)
 	if(any(names(version) == "language"))
 		class(lps.out) <- "lp"

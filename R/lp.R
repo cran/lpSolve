@@ -75,7 +75,7 @@ lp <- function(direction = "min", objective.in, const.mat, const.dir, const.rhs,
 		int.vec = as.integer(int.vec),
 		objval = as.double(objval),
 		solution = as.double(solution),
-		status = as.integer(status))
+		status = as.integer(status), PACKAGE="lpSolve")
 	if(any(names(version) == "language"))
 		class(lp.out) <- "lp"
 	else oldClass(lp.out) <- "lp"

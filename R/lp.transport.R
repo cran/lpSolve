@@ -116,7 +116,7 @@ lp.transport <- function(cost.mat, row.signs, row.rhs, col.signs, col.rhs)
 		intvec = intvec,
 		objval = objval,
 		solution = solution,
-		status = status)
+		status = status, PACKAGE="lpSolve")
 	lps.out$solution = matrix(lps.out$solution, nr, nc, byrow = TRUE)
 	if(any(names(version) == "language"))
 		class(lps.out) <- "lp"
