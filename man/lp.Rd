@@ -1,0 +1,65 @@
+\name{lp}
+\alias{lp}
+\title{Linear and Integer Programming}
+\description{Interface to lp\_solve linear/integer programming system}
+\usage{
+lp (direction = "min", objective.in, const.mat, const.dir, const.rhs,
+	transpose.constraints = TRUE, int.vec)
+}
+\arguments{
+\item{direction}{Character string giving direction of optimization:
+"min" (default) or "max."}
+\item{objective.in}{Numeric vector of coefficients of objective function}
+\item{const.mat}{Matrix of numeric constraint coefficients, one row 
+per constraint, one column per variable (unless transpose.constraints = 
+FALSE; see below).}
+\item{const.dir}{Vector of character strings giving the direction of 
+the constraint: each value should be one of "<," "<=," "=," "==," ">," or ">=."}
+\item{const.rhs}{Vector of numeric values for the right-hand sides of 
+the constraints.}
+\item{transpose.constraints}{By default each constraint occupies a row 
+of const.mat, and that matrix needs to be transposed before being passed 
+to the optimizing code.  For very large constraint matrices it may be wiser 
+to construct the constraints in a matrix column-by-column. In that case set 
+transpose.constraints to FALSE.}
+\item{int.vec}{Numeric vector giving the indices of variables that are 
+required to be integer. The length of this vector will therefore be the 
+number of integer variables.}
+}
+\details{
+This function calls the lp\_solve 4.0 solver. That system has many options not
+supported here. The current version is maintained at
+\url{ftp://ftp.es.ele.tue.nl/pub/lp_solve}
+}
+\value{
+An lp object. See \code{link{lp.object}} for details.
+}
+\author{Sam Buttrey, \email{buttrey@nps.navy.mil}}
+\seealso{\code{\link{lp.assign}}, \code{\link{lp.transport}}}
+\examples{
+#
+# Set up problem: maximize
+#   x1 + 9 x2 +   x3 subject to
+#   x1 + 2 x2 + 3 x3  <= 9
+# 3 x1 + 2 x2 + 2 x3 <= 15
+#
+f.obj <- c(1, 9, 3)
+f.con <- matrix (c(1, 2, 3, 3, 2, 2), nrow=2, byrow=TRUE)
+f.dir <- c("<=", "<=")
+f.rhs <- c(9, 15)
+#
+# Now run.
+#
+lp ("max", f.obj, f.con, f.dir, f.rhs)
+\dontrun{Success: the objective function is 40.5}
+lp ("max", f.obj, f.con, f.dir, f.rhs)$solution
+\dontrun{[1] 0.0 4.5 0.0}
+#
+# Run again, this time requiring that all three variables be integer
+#
+lp ("max", f.obj, f.con, f.dir, f.rhs, int.vec=1:3)
+\dontrun{Success: the objective function is 37}
+lp ("max", f.obj, f.con, f.dir, f.rhs, int.vec=1:3)$solution
+\dontrun{[1] 1 4 0}
+}
+\keyword{optimize}
