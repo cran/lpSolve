@@ -31,7 +31,7 @@ non-zero value means "yes." Currently ignored.}
 non-zero value means "yes."}
 }
 \details{
-This function calls the lp\_solve 4.0 solver. That system has many options not
+This function calls the lp\_solve 5.0 solver. That system has many options not
 supported here. The current version is maintained at
 \url{ftp://ftp.es.ele.tue.nl/pub/lp_solve}
 }

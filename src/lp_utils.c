@@ -14,6 +14,8 @@
 # include "lp_fortify.h"
 #endif
 
+#include "limits.h"
+
 
 /*
     Miscellaneous utilities as implemented for lp_solve v5.0+
@@ -318,7 +320,7 @@ STATIC REAL roundToPrecision(REAL value, REAL precision)
 # ifdef WIN32
 #  define __HYPER hyper
 # else
-#  define __HYPER long long
+#  define __HYPER long
 # endif
   __HYPER sign;
 
@@ -330,7 +332,8 @@ STATIC REAL roundToPrecision(REAL value, REAL precision)
     return( 0 );
   else if(value == floor(value))
     return( value*sign );
-  else if((value < (REAL) MAXINT64) &&
+/*  else if((value < (REAL) MAXINT64) && */
+  else if((value < (REAL) ULONG_MAX) &&
      (modf((REAL) (value+precision), &vmod) < precision)) {
     sign *= (__HYPER) (value+precision);
     return( (REAL) sign );
