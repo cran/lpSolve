@@ -69,8 +69,8 @@ lp <- function(direction = "min", objective.in, const.mat, const.dir, const.rhs,
 	# Set up constraint signs...
 	#
 	const.dir.num <- rep(-1, length(const.dir))
-	const.dir.num[const.dir == "<" | const.dir == "<="] <- 0
-	const.dir.num[const.dir == "=" | const.dir == "=="] <- 1
+	const.dir.num[const.dir == "<" | const.dir == "<="] <- 1
+	const.dir.num[const.dir == "=" | const.dir == "=="] <- 3
 	const.dir.num[const.dir == ">" | const.dir == ">="] <- 2
 	if(any(const.dir.num == -1))
 		stop("Unknown constraint direction found\n")

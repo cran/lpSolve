@@ -47,21 +47,22 @@ lp.assign <- function(cost.mat, presolve=0, compute.sens=0)
 	varcount <- as.integer(nr * nc)
 	objective <- as.double(c(0, c(t(cost.mat))))
 	#
-	# Set up the row and column constraints. Each
+	# Set up the row and column constraints. Each is of the
+	# "=1" type, represented by 3 (for "equals") 1.
 	#
 	constcount <- as.integer(nr + nc)
 	row.constraints <- array(0, c(nr, nc, nr))
 	for(i in 1:nr)
 		row.constraints[i,  , i] <- rep(1, nc)
 	row.constraints <- matrix(c(row.constraints), nrow = nr)
-	row.constraints <- cbind(row.constraints, rep(1, nr), rep(1, nr))
+	row.constraints <- cbind(row.constraints, rep(3, nr), rep(1, nr))
 	#
 	col.constraints <- array(0, c(nr, nc, nc))
 	for(i in 1:nc)
 		col.constraints[, i, i] <- rep(1, nr)
 	col.constraints <- matrix(c(apply(col.constraints, c(1, 2), t)), nrow = nc, byrow
 		 = TRUE)
-	col.constraints <- cbind(col.constraints, rep(1, nc), rep(1, nc))
+	col.constraints <- cbind(col.constraints, rep(3, nc), rep(1, nc))
 	all.constraints <- rbind(row.constraints, col.constraints)
 	all.constraints <- t(all.constraints)
 	constvec <- as.double(c(0, c(all.constraints)))

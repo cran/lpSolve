@@ -71,7 +71,7 @@ lp.transport <- function(cost.mat, row.signs, row.rhs, col.signs, col.rhs, preso
 	varcount <- as.integer(nr * nc)
 	objective <- as.double(c(0, c(t(cost.mat))))
 	#
-	# Set up the row and column constraints. Each
+	# Set up the row and column constraints.
 	#
 	constcount <- as.integer(nr + nc)
 	row.constraints <- array(0, c(nr, nc, nr))
@@ -79,8 +79,8 @@ lp.transport <- function(cost.mat, row.signs, row.rhs, col.signs, col.rhs, preso
 		row.constraints[i,  , i] <- rep(1, nc)
 	row.constraints <- matrix(c(row.constraints), nrow = nr)
 	num.signs <- rep(-1, nr)
-	num.signs[row.signs == "<" | row.signs == "<="] <- 0
-	num.signs[row.signs == "=" | row.signs == "=="] <- 1
+	num.signs[row.signs == "<" | row.signs == "<="] <- 1
+	num.signs[row.signs == "=" | row.signs == "=="] <- 3
 	num.signs[row.signs == ">" | row.signs == ">="] <- 2
 	if(any(num.signs == -1))
 		stop(paste("Unknown row sign in position ", which(num.signs == -1)[1]))
@@ -92,8 +92,8 @@ lp.transport <- function(cost.mat, row.signs, row.rhs, col.signs, col.rhs, preso
 	col.constraints <- matrix(c(apply(col.constraints, c(1, 2), t)), nrow = nc, byrow
 		 = TRUE)
 	num.signs <- rep(-1, nc)
-	num.signs[col.signs == "<" | col.signs == "<="] <- 0
-	num.signs[col.signs == "=" | col.signs == "=="] <- 1
+	num.signs[col.signs == "<" | col.signs == "<="] <- 1
+	num.signs[col.signs == "=" | col.signs == "=="] <- 3
 	num.signs[col.signs == ">" | col.signs == ">="] <- 2
 	if(any(num.signs == -1))
 		stop(paste("Unknown column sign in position ", which(num.signs == -1)[
