@@ -80,7 +80,7 @@ static struct structSOS {
 
 static struct _tmp_store_struct
 {
-  nstring name;
+  char    *name;
   int     row;
   REAL    value;
   REAL    rhs_value;
@@ -287,12 +287,14 @@ int set_sos_type(int SOStype)
   return(TRUE);
 }
 
-int set_sos_weight(int weight, int sos_decl)
+int set_sos_weight(double weight, int sos_decl)
 {
-  if(sos_decl==1)
-    LastSOS->weight = weight;
-  else
-    LastSOS->LastSOSvars->weight = weight;
+  if(LastSOS != NULL) {
+    if(sos_decl==1)
+      LastSOS->weight = (int) (weight+.1);
+    else
+      LastSOS->LastSOSvars->weight = weight;
+  }
   return(TRUE);
 }
 
@@ -301,7 +303,7 @@ void set_obj_dir(int maximise)
   Maximise = (short) maximise;
 }
 
-static int inccoldata()
+static int inccoldata(void)
 {
   if(Columns == 0)
     CALLOC(coldata, coldatastep, struct structcoldata);
@@ -361,7 +363,7 @@ void null_tmp_store(int init_Lin_term_count)
 {
   tmp_store.value = 0;
   tmp_store.rhs_value = 0;
-  tmp_store.name[0] = 0;
+  FREE(tmp_store.name);
   if(init_Lin_term_count)
     Lin_term_count = 0;
 }
@@ -428,7 +430,7 @@ static int store(char *variable,
   return(TRUE);
 } /* store */
 
-static int storefirst()
+static int storefirst(void)
 {
     struct rside *rp;
 
@@ -480,6 +482,13 @@ int store_re_op(char *yytext, int HadConstraint, int HadVar, int Had_lineair_sum
 
   case '<':
     tmp_relat = LE;
+    break;
+
+  case 0:
+    if(rs != NULL)
+      tmp_relat = rs->relat;
+    else
+      tmp_relat = tmp_store.relat;
     break;
 
   default:
@@ -599,18 +608,11 @@ int var_store(char *var, REAL value, int HadConstraint, int HadVar, int Had_line
   int row;
 
   row = Rows;
-  if(strlen(var) > MAXSTRL) {
-    char buf[256];
 
-    sprintf(buf, "Variable name '%-.*s' too long, at most %d characters allowed",
-	    MAXSTRL, var, MAXSTRL);
-    error(CRITICAL, buf);
-    return(FALSE);
-  }
   /* also in a bound the same var name can occur more than once. Check for
      this. Don't increment Lin_term_count */
 
-  if(Lin_term_count != 1 || strcmp(tmp_store.name, var) != 0)
+  if(Lin_term_count != 1 || tmp_store.name == NULL || strcmp(tmp_store.name, var) != 0)
     Lin_term_count++;
 
   /* always store objective function with rownr == 0. */
@@ -618,7 +620,8 @@ int var_store(char *var, REAL value, int HadConstraint, int HadVar, int Had_line
     return(store(var,  row,  value));
 
   if(Lin_term_count == 1) { /* don't store yet. could be a bound */
-    strcpy(tmp_store.name, var);
+    if(MALLOC(tmp_store.name, strlen(var) + 1, char) != NULL)
+      strcpy(tmp_store.name, var);
     tmp_store.row = row;
     tmp_store.value += value;
     return(TRUE);
@@ -701,10 +704,20 @@ int store_bounds(int warn)
   else /* tmp_store.value = 0 ! */ {
     char buf[256];
 
-    sprintf(buf, "Error, variable %s has an effective coefficient of 0 in bound",
-	    tmp_store.name);
-    error(CRITICAL, buf);
-    return(FALSE);
+    if((tmp_store.rhs_value == 0) ||
+       ((tmp_store.rhs_value > 0) && (tmp_store.relat == LE)) ||
+       ((tmp_store.rhs_value < 0) && (tmp_store.relat == GE))) {
+      sprintf(buf, "Variable %s has an effective coefficient of 0 in bound, ignored",
+	      tmp_store.name);
+      if(warn)
+        error(NORMAL, buf);
+    }
+    else {
+      sprintf(buf, "Error, variable %s has an effective coefficient of 0 in bound",
+	      tmp_store.name);
+      error(CRITICAL, buf);
+      return(FALSE);
+    }
   }
 
   /* null_tmp_store(FALSE); */
@@ -723,15 +736,6 @@ int add_constraint_name(char *name)
 {
   int row;
   hashelem *hp;
-
-  if(strlen(name) > MAXSTRL) {
-    char buf[256];
-
-    sprintf(buf, "Constraint name '%-.*s' too long, at most %d characters allowed",
-	    MAXSTRL, name, MAXSTRL);
-    error(CRITICAL, buf);
-    return(FALSE);
-  }
 
   if((hp = findhash(name, Hash_constraints)) != NULL) {
     row = hp->index;
@@ -1102,5 +1106,6 @@ lprec *yacc_read(lprec *lp, int verbose, char *lp_name, int *_lineno, int (*pars
     }
     FREE(relat);
   }
+  null_tmp_store(FALSE);
   return(lp);
 }

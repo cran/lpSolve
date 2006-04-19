@@ -87,7 +87,7 @@
 /* stats [3]: colamd status:  zero OK, > 0 warning or notice, < 0 error */
 #define COLAMD_STATUS 3
 
-/* stats [4..6]: error info, or info on jumbled columns */ 
+/* stats [4..6]: error info, or info on jumbled columns */
 #define COLAMD_INFO1 4
 #define COLAMD_INFO2 5
 #define COLAMD_INFO3 6
@@ -199,10 +199,26 @@ typedef struct Colamd_Row_struct
 /* === Prototypes of user-callable routines ================================= */
 /* ========================================================================== */
 
+/*
 #ifdef __cplusplus
   #define __EXTERN_C extern "C"
 #else
   #define __EXTERN_C
+#endif
+*/
+
+#ifndef __BORLANDC__
+
+  #ifdef __cplusplus
+    #define __EXTERN_C extern "C"
+  #else
+    #define __EXTERN_C
+  #endif
+
+#else  /* Otherwise set up for the Borland compiler */
+
+  #define __EXTERN_C extern "C"
+
 #endif
 
 #ifdef __cplusplus

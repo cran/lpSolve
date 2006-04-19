@@ -1,5 +1,5 @@
 
-/*  A Bison parser, made from ../lp_rlp.y
+/*  A Bison parser, made from lp_rlp.y
     by GNU Bison version 1.28  */
 
 #define YYBISON 1  /* Identify Bison output.  */
@@ -31,8 +31,12 @@
 #include "lpkit.h"
 #include "yacc_read.h"
 
+#ifdef FORTIFY
+# include "lp_fortify.h"
+#endif
+
 static int HadVar0, HadVar1, HadVar2, HasAR_M_OP, do_add_row, Had_lineair_sum0, HadSign;
-static char Last_var[NAMELEN], Last_var0[NAMELEN];
+static char *Last_var = NULL, *Last_var0 = NULL;
 static REAL f, f0, f1;
 static int x;
 static int state, state0;
@@ -48,12 +52,13 @@ static int Within_sos_decl1;
 static short SOStype0; /* SOS type */
 static short SOStype; /* SOS type */
 static int SOSNr;
-static int weight; /* SOS weight */
 static int SOSweight = 0; /* SOS weight */
 
 static int HadConstraint;
 static int HadVar;
 static int Had_lineair_sum;
+
+extern FILE *lp_yyin;
 
 #define YY_FATAL_ERROR lex_fatal_error
 
@@ -66,6 +71,21 @@ static int wrap(void)
 {
   return(1);
 }
+
+static int __WINAPI lp_input_lp_yyin(void *fpin, char *buf, int max_size)
+{
+  int result;
+
+  if ( (result = fread( (char*)buf, sizeof(char), max_size, (FILE *) fpin)) < 0)
+    YY_FATAL_ERROR( "read() in flex scanner failed");
+
+  return(result);
+}
+
+static read_modeldata_func *lp_input;
+
+#undef YY_INPUT
+#define YY_INPUT(buf,result,max_size) result = lp_input((void *) lp_yyin, buf, max_size);
 
 #ifdef __cplusplus
 };
@@ -159,23 +179,23 @@ static const short lp_yyrhs[] = {    -1,
      0,    18,     5,     0,    22,     0,    68,     0,    74,     0,
     68,    69,    74,     0,    22,     0,    17,     0,    22,     0,
      0,    22,     0,    22,     0,     3,    70,     0,     6,    71,
-    75,     0,     5,    72,     0,    73,    76,     0,     3,    70,
-     0,     6,    71,     5,    72,     0
+    75,     0,    50,    72,     0,    73,    76,     0,     3,    70,
+     0,     6,    71,    50,    72,     0
 };
 
 #endif
 
 #if YYDEBUG != 0
 static const short lp_yyrline[] = { 0,
-    66,    69,    78,    92,    96,   100,   103,   114,   115,   145,
-   146,   149,   150,   154,   155,   162,   164,   170,   177,   199,
-   215,   221,   232,   236,   257,   267,   273,   274,   279,   281,
-   286,   300,   301,   305,   341,   345,   353,   358,   358,   361,
-   363,   374,   374,   377,   382,   389,   393,   399,   416,   418,
-   421,   422,   425,   425,   425,   428,   434,   436,   446,   458,
-   460,   463,   464,   469,   471,   478,   492,   494,   498,   505,
-   506,   509,   510,   515,   516,   519,   546,   564,   588,   603,
-   606,   611,   613,   617,   620
+    86,    89,    98,   112,   116,   120,   123,   134,   135,   165,
+   166,   169,   170,   174,   175,   182,   184,   190,   197,   221,
+   237,   243,   254,   258,   279,   289,   295,   296,   301,   303,
+   308,   322,   323,   327,   363,   367,   375,   380,   380,   383,
+   385,   396,   396,   399,   404,   411,   415,   421,   438,   440,
+   443,   444,   447,   447,   447,   450,   456,   458,   468,   480,
+   482,   485,   486,   492,   494,   501,   515,   517,   521,   528,
+   529,   532,   533,   538,   539,   542,   567,   586,   608,   622,
+   625,   630,   632,   636,   639
 };
 #endif
 
@@ -193,7 +213,7 @@ static const char * const lp_yytname[] = {   "$","error","$undefined.","VAR","CO
 "real_int_sec_sos_decls","SEC_INT_SEC_SOS","int_sec_sos_declaration","@11","xx_int_sec_sos_declaration",
 "@12","x_int_sec_sos_declaration","optionalsos","@13","optionalsostype","@14",
 "optionalSOSweight","vars","x_vars","optionalcomma","variable","variablecolon",
-"intcons","sosdescr","onevarwithoptionalweight","INTCONSorVARIABLE","x_onevarwithoptionalweight", NULL
+"sosweight","sosdescr","onevarwithoptionalweight","INTCONSorVARIABLE","x_onevarwithoptionalweight", NULL
 };
 #endif
 
@@ -246,26 +266,26 @@ static const short lp_yydefgoto[] = {     4,
 };
 
 static const short lp_yypact[] = {-32768,
-    33,    16,    16,-32768,     2,-32768,    21,-32768,    29,-32768,
--32768,-32768,-32768,    36,    -7,    19,-32768,-32768,-32768,-32768,
--32768,-32768,-32768,-32768,    32,-32768,     8,    28,-32768,-32768,
--32768,-32768,-32768,-32768,    -7,-32768,-32768,-32768,-32768,    57,
+    42,    10,    10,-32768,     2,-32768,    14,-32768,    32,-32768,
+-32768,-32768,-32768,   -12,    64,    25,-32768,-32768,-32768,-32768,
+-32768,-32768,-32768,-32768,    41,-32768,     8,    34,-32768,-32768,
+-32768,-32768,-32768,-32768,    64,-32768,-32768,-32768,-32768,     3,
 -32768,-32768,-32768,-32768,-32768,-32768,-32768,-32768,-32768,-32768,
--32768,-32768,-32768,-32768,-32768,-32768,    42,-32768,    50,    30,
-    62,-32768,-32768,-32768,    53,-32768,-32768,-32768,-32768,-32768,
--32768,    52,    41,-32768,    57,-32768,-32768,-32768,-32768,    73,
-    75,-32768,    63,-32768,-32768,    53,-32768,    65,-32768,-32768,
-    59,-32768,-32768,-32768,-32768,-32768,    24,-32768,-32768,-32768,
--32768,-32768,    64,-32768,-32768,    69,-32768,    78,    79,-32768,
--32768,-32768,-32768,-32768,-32768,-32768,-32768,    86,    87,-32768
+-32768,-32768,-32768,-32768,-32768,-32768,    56,-32768,    54,    28,
+    73,-32768,-32768,-32768,    13,-32768,-32768,-32768,-32768,-32768,
+-32768,    57,    29,-32768,     3,-32768,-32768,-32768,-32768,    72,
+    77,-32768,    65,-32768,-32768,    13,-32768,    67,-32768,-32768,
+    63,-32768,-32768,-32768,-32768,-32768,    35,-32768,-32768,-32768,
+-32768,-32768,    66,-32768,-32768,    72,-32768,    72,    81,-32768,
+-32768,-32768,-32768,-32768,-32768,-32768,-32768,    87,    88,-32768
 };
 
 static const short lp_yypgoto[] = {    -5,
--32768,-32768,-32768,    74,-32768,-32768,-32768,    72,-32768,    61,
--32768,-32768,-32768,-32768,-32768,-32768,-32768,    35,-32768,    15,
--32768,-32768,    66,-32768,-32768,    18,-32768,   -16,    -3,-32768,
-   -15,-32768,-32768,-32768,    67,-32768,    39,-32768,-32768,-32768,
--32768,-32768,-32768,-32768,-32768,-32768,-32768,     0,     3,   -13,
+-32768,-32768,-32768,    76,-32768,-32768,-32768,    74,-32768,    61,
+-32768,-32768,-32768,-32768,-32768,-32768,-32768,    30,-32768,    49,
+-32768,-32768,    68,-32768,-32768,    19,-32768,   -79,    -1,-32768,
+   -15,-32768,-32768,-32768,    69,-32768,    39,-32768,-32768,-32768,
+-32768,-32768,-32768,-32768,-32768,-32768,-32768,     0,     1,   -13,
     23,    20,-32768,-32768
 };
 
@@ -274,31 +294,31 @@ static const short lp_yypgoto[] = {    -5,
 
 
 static const short lp_yytable[] = {    14,
-    30,    31,    32,    24,   -30,   -30,   -30,    12,    13,    33,
-    38,    42,    43,   -30,   -30,     8,     8,     8,   -11,    24,
-    44,    45,    38,    50,    12,    13,   -11,   -11,   -11,   -57,
-   104,    -1,    -1,    -1,    13,    23,    22,   -57,   -57,   -57,
-    23,    -1,    -1,    23,    62,   -31,   -31,   -31,    -1,   -25,
-   -25,     2,     3,    64,   -71,    69,   -71,    84,    70,    71,
-    63,   100,    76,    78,   101,    81,    82,    85,    13,    87,
-    54,    55,    42,    43,    76,    10,    11,    90,    94,    93,
-    96,   109,   114,   115,    98,   119,   120,    39,    49,   113,
-    41,    24,    89,   106,    78,    67,   116,   110,    66,   107,
-   117,    52,    91,   108,     0,    95,    50,     0,    98
+    90,   -25,   -25,    24,   -30,   -30,   -30,    12,    13,    33,
+    38,    42,    43,   -30,   -30,    69,    54,    55,    70,    24,
+    44,    45,    38,    50,   -11,    -1,   113,   -57,   114,    22,
+    12,    13,   -11,   -11,   -11,   -57,   -57,   -57,    -1,    -1,
+    13,   104,   -71,    23,   -71,    84,    23,    -1,    -1,     8,
+     8,     8,    23,    64,   -31,   -31,   -31,    -1,    62,    71,
+     2,     3,    76,    78,    63,   100,    82,    85,   101,    87,
+    81,    30,    31,    32,    76,    42,    43,    10,    11,    13,
+    94,    93,    96,   109,    98,   115,   119,   120,    49,    39,
+    67,    24,    41,    89,    78,   106,   116,   110,    66,   107,
+   117,   108,    91,    52,     0,    95,    50,     0,    98
 };
 
 static const short lp_yycheck[] = {     5,
-     8,     9,    10,     9,     3,     4,     5,     6,     7,    15,
-    16,     4,     5,    12,    13,     1,     2,     3,     0,    25,
-    13,    27,    28,    29,     6,     7,     8,     9,    10,     0,
-     7,    16,    14,    15,     7,    12,    16,     8,     9,    10,
-    12,    14,    15,    12,     3,    14,    15,    16,    16,    14,
-    15,    19,    20,    59,    14,     3,    16,    17,     6,    65,
-    11,     3,    68,    69,     6,    14,    72,    73,     7,    75,
-    14,    15,     4,     5,    80,     2,     3,     5,    16,     5,
-    16,    18,     5,     5,    90,     0,     0,    16,    28,   106,
-    25,    97,    75,    97,   100,    61,   112,   103,    60,   100,
-   114,    35,    80,   101,    -1,    86,   112,    -1,   114
+    80,    14,    15,     9,     3,     4,     5,     6,     7,    15,
+    16,     4,     5,    12,    13,     3,    14,    15,     6,    25,
+    13,    27,    28,    29,     0,    16,   106,     0,   108,    16,
+     6,     7,     8,     9,    10,     8,     9,    10,    14,    15,
+     7,     7,    14,    12,    16,    17,    12,    14,    15,     1,
+     2,     3,    12,    59,    14,    15,    16,    16,     3,    65,
+    19,    20,    68,    69,    11,     3,    72,    73,     6,    75,
+    14,     8,     9,    10,    80,     4,     5,     2,     3,     7,
+    16,     5,    16,    18,    90,     5,     0,     0,    28,    16,
+    61,    97,    25,    75,   100,    97,   112,   103,    60,   100,
+   114,   101,    80,    35,    -1,    86,   112,    -1,   114
 };
 /* -*-C-*-  Note some compilers choke on comments on `#line' lines.  */
 
@@ -911,6 +931,8 @@ case 19:
   }
   else {
     /* it is a row restriction */
+    if(HadConstraint && HadVar)
+      store_re_op("", HadConstraint, HadVar, Had_lineair_sum); /* makes sure that data stored in temporary buffers is treated correctly */
     do_add_row = TRUE;
   }
 ;
@@ -1129,14 +1151,15 @@ case 59:
     break;}
 case 63:
 {
-  strcpy(Last_var0, Last_var);
+  FREE(Last_var0);
+  Last_var0 = strdup(Last_var);
 ;
     break;}
 case 65:
 {
   if(Within_sos_decl1) {
     set_sos_type(SOStype);
-    set_sos_weight(SOSweight, 1);
+    set_sos_weight((double) SOSweight, 1);
   }
 ;
     break;}
@@ -1155,12 +1178,12 @@ case 66:
     break;}
 case 68:
 {
-  set_sos_weight(SOSweight, 1);
+  set_sos_weight((double) SOSweight, 1);
 ;
     break;}
 case 69:
 {
-  set_sos_weight((int) (f + .1), 1);
+  set_sos_weight(f, 1);
 ;
     break;}
 case 76:
@@ -1175,7 +1198,6 @@ case 76:
 
     check_int_sec_sos_decl(Within_int_decl, Within_sec_decl, 2);
     Within_sos_decl1 = 2;
-    weight = 0;
     SOSNr = 0;
   }
 
@@ -1184,8 +1206,7 @@ case 76:
   if(Within_sos_decl1 == 2)
   {
     SOSNr++;
-    weight = SOSNr;
-    set_sos_weight(weight, 2);
+    set_sos_weight((double) SOSNr, 2);
   }
 ;
     break;}
@@ -1195,14 +1216,15 @@ case 77:
     lp_yyerror("parse error");
     YYABORT;
   }
-  if(Within_sos_decl1 == 1)
-    strcpy(Last_var0, Last_var);
+  if(Within_sos_decl1 == 1) {
+    FREE(Last_var0);
+    Last_var0 = strdup(Last_var);
+  }
   if(Within_sos_decl1 == 2)
   {
     storevarandweight(Last_var);
     SOSNr++;
-    weight = SOSNr;
-    set_sos_weight(weight, 2);
+    set_sos_weight((double) SOSNr, 2);
   }
 ;
     break;}
@@ -1218,15 +1240,13 @@ case 78:
 
     check_int_sec_sos_decl(Within_int_decl, Within_sec_decl, 2);
     Within_sos_decl1 = 2;
-    weight = 0;
     SOSNr = 0;
 
     storevarandweight(Last_var0);
     SOSNr++;
   }
 
-  weight = (int) (f + .1);
-  set_sos_weight(weight, 2);
+  set_sos_weight(f, 2);
 ;
     break;}
 case 79:
@@ -1237,7 +1257,6 @@ case 79:
     set_sos_type(SOStype);
     check_int_sec_sos_decl(Within_int_decl, Within_sec_decl, 2);
     Within_sos_decl1 = 2;
-    weight = 0;
     SOSNr = 0;
     SOSweight++;
   }
@@ -1486,6 +1505,9 @@ static void lp_yy_delete_allocated_memory(void)
     lp_yy_init = 1; /* make sure that the next time memory is allocated again */
     lp_yy_start = 0;
 # endif
+
+  FREE(Last_var);
+  FREE(Last_var0);
 }
 
 static int parse(void)
@@ -1493,25 +1515,31 @@ static int parse(void)
   return(lp_yyparse());
 }
 
-lprec *read_lpex(lprec *lp, FILE *filename, int verbose, char *lp_name)
+lprec *read_lp1(lprec *lp, void *userhandle, read_modeldata_func read_modeldata, int verbose, char *lp_name)
 {
-  lp_yyin = filename;
+  lp_yyin = (FILE *) userhandle;
   lp_yyout = NULL;
   lp_yylineno = 1;
+  lp_input = read_modeldata;
   return(yacc_read(lp, verbose, lp_name, &lp_yylineno, parse, lp_yy_delete_allocated_memory));
 }
 
 lprec * __WINAPI read_lp(FILE *filename, int verbose, char *lp_name)
 {
-  return(read_lpex(NULL, filename, verbose, lp_name));
+  return(read_lp1(NULL, filename, lp_input_lp_yyin, verbose, lp_name));
 }
 
-lprec *read_LPex(lprec *lp, char *filename, int verbose, char *lp_name)
+lprec * __WINAPI read_lpex(void *userhandle, read_modeldata_func read_modeldata, int verbose, char *lp_name)
+{
+  return(read_lp1(NULL, userhandle, read_modeldata, verbose, lp_name));
+}
+
+lprec *read_LP1(lprec *lp, char *filename, int verbose, char *lp_name)
 {
   FILE *fpin;
 
   if((fpin = fopen(filename, "r")) != NULL) {
-    lp = read_lpex(lp, fpin, verbose, lp_name);
+    lp = read_lp1(lp, fpin, lp_input_lp_yyin, verbose, lp_name);
     fclose(fpin);
   }
   else
@@ -1521,5 +1549,13 @@ lprec *read_LPex(lprec *lp, char *filename, int verbose, char *lp_name)
 
 lprec * __WINAPI read_LP(char *filename, int verbose, char *lp_name)
 {
-  return(read_LPex(NULL, filename, verbose, lp_name));
+  return(read_LP1(NULL, filename, verbose, lp_name));
+}
+
+MYBOOL __WINAPI LP_readhandle(lprec **lp, FILE *filename, int verbose, char *lp_name)
+{
+  if(lp != NULL)
+    *lp = read_lp1(*lp, filename, lp_input_lp_yyin, verbose, lp_name);
+
+  return((lp != NULL) && (*lp != NULL));
 }

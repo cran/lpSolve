@@ -31,13 +31,13 @@
 #else
   #define __BFP_EXPORT_TYPE
 #endif
- 
+
 
 /* Routines with UNIQUE implementations for each inversion engine                     */
 /* ---------------------------------------------------------------------------------- */
 char   __BFP_EXPORT_TYPE *(BFP_CALLMODEL bfp_name)(void);
 void   __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_free)(lprec *lp);
-void   __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_resize)(lprec *lp, int newsize);
+MYBOOL __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_resize)(lprec *lp, int newsize);
 int    __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_nonzeros)(lprec *lp, MYBOOL maximum);
 int    __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_memallocated)(lprec *lp);
 int    __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_preparefactorization)(lprec *lp);
@@ -47,11 +47,12 @@ void   __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_ftran_normal)(lprec *lp, REAL *pcol,
 void   __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_ftran_prepare)(lprec *lp, REAL *pcol, int *nzidx);
 void   __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_btran_normal)(lprec *lp, REAL *prow, int *nzidx);
 int    __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_status)(lprec *lp);
+int    __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_findredundant)(lprec *lp, int items, getcolumnex_func cb, int *maprow, int*mapcol);
 
 
 /* Routines SHARED for all inverse implementations; located in lp_BFP1.c              */
 /* ---------------------------------------------------------------------------------- */
-MYBOOL __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_compatible)(lprec *lp, int bfpversion, int lpversion);
+MYBOOL __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_compatible)(lprec *lp, int bfpversion, int lpversion, int sizeofvar);
 int    __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_indexbase)(lprec *lp);
 int    __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_rowoffset)(lprec *lp);
 int    __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_pivotmax)(lprec *lp);
@@ -62,14 +63,16 @@ MYBOOL __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_mustrefactorize)(lprec *lp);
 int    __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_refactcount)(lprec *lp, int kind);
 MYBOOL __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_isSetI)(lprec *lp);
 int    *bfp_createMDO(lprec *lp, MYBOOL *usedpos, int count, MYBOOL doMDO);
-void   bfp_updaterefactstats(lprec *lp);
+void   BFP_CALLMODEL bfp_updaterefactstats(lprec *lp);
+int    BFP_CALLMODEL bfp_rowextra(lprec *lp);
 
 /* Routines with OPTIONAL SHARED code; template routines suitable for canned          */
 /* inverse engines are located in lp_BFP2.c                                           */
 /* ---------------------------------------------------------------------------------- */
-MYBOOL __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_init)(lprec *lp, int size, int deltasize);
+MYBOOL __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_init)(lprec *lp, int size, int deltasize, char *options);
 MYBOOL __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_restart)(lprec *lp);
-void   __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_pivotalloc)(lprec *lp, int newsize);
+MYBOOL __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_implicitslack)(lprec *lp);
+MYBOOL __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_pivotalloc)(lprec *lp, int newsize);
 int    __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_colcount)(lprec *lp);
 MYBOOL __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_canresetbasis)(lprec *lp);
 void   __BFP_EXPORT_TYPE (BFP_CALLMODEL bfp_finishfactorization)(lprec *lp);

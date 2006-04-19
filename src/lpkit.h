@@ -1,9 +1,6 @@
 #include "lp_lib.h"
 #include "lp_report.h"
 
-#define NAMELEN 25
-#define MAXSTRL (NAMELEN-1)
-
 #define MALLOC(ptr, nr, type)\
   ((((nr) == 0) || ((ptr = (type *) malloc((size_t)((nr) * sizeof(*ptr)))) == NULL)) ? \
    report(NULL, CRITICAL, "malloc of %d bytes failed on line %d of file %s\n",\
@@ -33,5 +30,3 @@
 
 #define MALLOCCPY(nptr, optr, nr, type)\
   (MALLOC(nptr, nr, type), (nptr != NULL) ? memcpy(nptr, optr, (size_t)((nr) * sizeof(*optr))) : 0, nptr)
-
-typedef char nstring[NAMELEN];

@@ -18,6 +18,6 @@ error if not.}
 \value{
 None
 }
-\author{Sam Buttrey, \email{buttrey@nps.navy.mil}}
+\author{Sam Buttrey, \email{buttrey@nps.edu}}
 \seealso{\code{\link{lp}}, \code{\link{lp.assign}}, \code{\link{lp.transport}}}
 \keyword{optimize}

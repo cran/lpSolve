@@ -18,3 +18,4 @@ MYBOOL LP_writehandle(lprec *lp, FILE *output);
 #endif
 
 #endif /* HEADER_lp_lp */
+

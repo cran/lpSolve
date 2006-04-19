@@ -40,3 +40,4 @@ STATIC int find_row(lprec *lp, char *name, MYBOOL Unconstrained_rows_found);
 #endif
 
 #endif /* HEADER_lp_hash */
+

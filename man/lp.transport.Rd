@@ -4,11 +4,12 @@
 \description{Interface to lp\_solve linear/integer programming
 system specifically for solving transportation problems}
 \usage{
-lp.transport (cost.mat, row.signs, row.rhs, col.signs, col.rhs, presolve=0, compute.sens=0)
+lp.transport (cost.mat, direction="min", row.signs, row.rhs, col.signs, col.rhs, presolve=0, compute.sens=0)
 }
 \arguments{
 \item{cost.mat}{Matrix of costs; ij-th element is the cost of transporting 
 one item from source i to destination j.}
+\item{direction}{Character, length 1: "min" or "max"}
 \item{row.signs}{Vector of character strings giving the direction of the 
 row constraints: each value should be one of "<," "<=," "=," "==," ">," 
 or ">=."}
@@ -30,11 +31,12 @@ are assumed to be integers, and there is one constraint per row and one per
 column (and no others). This is assumed to be a minimization problem.
 }
 \value{
-An \code{\link{lp}} object. See documentation for details.
+An \code{\link{lp}} object. Constraints are implicit and not returned.
+See documentation for details.
 }
 \references{Example problem from Bronson (1981), \emph{Operations Research},
 Scahum's Outline Series, McGraw-Hill.}
-\author{Sam Buttrey, \email{buttrey@nps.navy.mil}}
+\author{Sam Buttrey, \email{buttrey@nps.edu}}
 \seealso{\code{\link{lp.assign}}, \code{\link{lp.transport}}}
 
 \examples{
@@ -57,9 +59,9 @@ col.rhs <- c(250, 100, 400, 500, 200)
 #
 # Run
 #
-lp.transport (costs, row.signs, row.rhs, col.signs, col.rhs)
+lp.transport (costs, "min", row.signs, row.rhs, col.signs, col.rhs)
 \dontrun{Success: the objective function is 7790}
-lp.transport (costs, row.signs, row.rhs, col.signs, col.rhs)$solution
+lp.transport (costs, "min", row.signs, row.rhs, col.signs, col.rhs)$solution
 \dontrun{
      [,1] [,2] [,3] [,4] [,5]
 [1,]    0  100    0  100    0

@@ -14,10 +14,10 @@
 /* Initialize BLAS interfacing routines                                     */
 /* ************************************************************************ */
 MYBOOL mustinitBLAS = TRUE;
-#ifdef WIN32
+#if (defined WIN32) || (defined WIN64)
   HINSTANCE hBLAS = NULL;
 #else
-  void      *hBLAS = NULL;
+  void     *hBLAS = NULL;
 #endif
 
 
@@ -30,6 +30,7 @@ BLAS_daxpy_func  *BLAS_daxpy;
 BLAS_dswap_func  *BLAS_dswap;
 BLAS_ddot_func   *BLAS_ddot;
 BLAS_idamax_func *BLAS_idamax;
+BLAS_idamin_func *BLAS_idamin;
 BLAS_dload_func  *BLAS_dload;
 BLAS_dnormi_func *BLAS_dnormi;
 
@@ -38,7 +39,7 @@ BLAS_dnormi_func *BLAS_dnormi;
 /* Define the BLAS interfacing routines                                     */
 /* ************************************************************************ */
 
-void init_BLAS()
+void init_BLAS(void)
 {
   if(mustinitBLAS) {
     load_BLAS(NULL);
@@ -46,7 +47,7 @@ void init_BLAS()
   }
 }
 
-MYBOOL is_nativeBLAS()
+MYBOOL is_nativeBLAS(void)
 {
 #ifdef LoadableBlasLib
   return( (MYBOOL) (hBLAS == NULL) );
@@ -61,12 +62,7 @@ MYBOOL load_BLAS(char *libname)
 
 #ifdef LoadableBlasLib
   if(hBLAS != NULL) {
-  #ifdef WIN32
-    FreeLibrary(hBLAS);
-  #else
-    dlclose(hBLAS);
-  #endif
-    hBLAS = NULL;
+    my_FreeLibrary(hBLAS);
   }
 #endif
 
@@ -77,8 +73,9 @@ MYBOOL load_BLAS(char *libname)
     BLAS_dcopy = my_dcopy;
     BLAS_daxpy = my_daxpy;
     BLAS_dswap = my_dswap;
-    BLAS_ddot = my_ddot;
+    BLAS_ddot  = my_ddot;
     BLAS_idamax = my_idamax;
+    BLAS_idamin = my_idamin;
     BLAS_dload = my_dload;
     BLAS_dnormi = my_dnormi;
     if(mustinitBLAS)
@@ -86,73 +83,42 @@ MYBOOL load_BLAS(char *libname)
   }
   else {
 #ifdef LoadableBlasLib
-  #ifdef WIN32
-   /* Get a handle to the Windows DLL module. */
-    hBLAS = LoadLibrary(libname);
-
-   /* If the handle is valid, try to get the function addresses. */
-    if(hBLAS == NULL) {
-      unload_BLAS();
-      result = FALSE;
-    }
-    else {
-      BLAS_dscal  = (BLAS_dscal_func *)  GetProcAddress(hBLAS, "dscal");
-      BLAS_dcopy  = (BLAS_dcopy_func *)  GetProcAddress(hBLAS, "dcopy");
-      BLAS_daxpy  = (BLAS_daxpy_func *)  GetProcAddress(hBLAS, "daxpy");
-      BLAS_dswap  = (BLAS_dswap_func *)  GetProcAddress(hBLAS, "dswap");
-      BLAS_ddot   = (BLAS_ddot_func *)   GetProcAddress(hBLAS, "ddot");
-      BLAS_idamax = (BLAS_idamax_func *) GetProcAddress(hBLAS, "idamax");
-#if 0      
-      BLAS_dload  = (BLAS_dload_func *)  GetProcAddress(hBLAS, "dload");
-      BLAS_dnormi = (BLAS_dnormi_func *) GetProcAddress(hBLAS, "dnormi");
-#endif      
-    }
+  #if (defined WIN32) || (defined WIN64)
+    char *blasname = libname;
   #else
    /* First standardize UNIX .SO library name format. */
-    char blasname[260], *ptr;
-
-    strcpy(blasname, libname);
-    if((ptr = strrchr(libname, '/')) == NULL)
-      ptr = libname;
-    else
-      ptr++;
-    blasname[(int) (ptr - libname)] = 0;
-    if(strncmp(ptr, "lib", 3))
-      strcat(blasname, "lib");
-    strcat(blasname, ptr);
-    if(strcmp(blasname + strlen(blasname) - 3, ".so"))
-      strcat(blasname, ".so");
-
-   /* Get a handle to the module. */
-    hBLAS = dlopen(blasname, RTLD_LAZY);
+    char blasname[260];
+    if(!so_stdname(blasname, libname, 260))
+      return( FALSE );
+  #endif
+   /* Get a handle to the Windows DLL module. */
+    hBLAS = my_LoadLibrary(blasname);
 
    /* If the handle is valid, try to get the function addresses. */
-    if(hBLAS == NULL) {
-      unload_BLAS();
-      result = FALSE;
-    }
-    else {
-      BLAS_dscal  = (BLAS_dscal_func *)  dlsym(hBLAS, "dscal");
-      BLAS_dcopy  = (BLAS_dcopy_func *)  dlsym(hBLAS, "dcopy");
-      BLAS_daxpy  = (BLAS_daxpy_func *)  dlsym(hBLAS, "daxpy");
-      BLAS_dswap  = (BLAS_dswap_func *)  dlsym(hBLAS, "dswap");
-      BLAS_ddot   = (BLAS_ddot_func *)   dlsym(hBLAS, "ddot");
-      BLAS_idamax = (BLAS_idamax_func *) dlsym(hBLAS, "idamax");
+    result = (MYBOOL) (hBLAS != NULL);
+    if(result) {
+      BLAS_dscal  = (BLAS_dscal_func *)  my_GetProcAddress(hBLAS, BLAS_prec "scal");
+      BLAS_dcopy  = (BLAS_dcopy_func *)  my_GetProcAddress(hBLAS, BLAS_prec "copy");
+      BLAS_daxpy  = (BLAS_daxpy_func *)  my_GetProcAddress(hBLAS, BLAS_prec "axpy");
+      BLAS_dswap  = (BLAS_dswap_func *)  my_GetProcAddress(hBLAS, BLAS_prec "swap");
+      BLAS_ddot   = (BLAS_ddot_func *)   my_GetProcAddress(hBLAS, BLAS_prec "dot");
+      BLAS_idamax = (BLAS_idamax_func *) my_GetProcAddress(hBLAS, "i" BLAS_prec "amax");
+      BLAS_idamin = (BLAS_idamin_func *) my_GetProcAddress(hBLAS, "i" BLAS_prec "amin");
 #if 0      
-      BLAS_dload  = (BLAS_dload_func *)  dlsym(hBLAS, "dload");
-      BLAS_dnormi = (BLAS_dnormi_func *) dlsym(hBLAS, "dnormi");
+      BLAS_dload  = (BLAS_dload_func *)  my_GetProcAddress(hBLAS, BLAS_prec "load");
+      BLAS_dnormi = (BLAS_dnormi_func *) my_GetProcAddress(hBLAS, BLAS_prec "normi");
 #endif      
     }
-  #endif
 #endif
     /* Do validation */
-    if(result &&
+    if(!result ||
        ((BLAS_dscal  == NULL) ||
         (BLAS_dcopy  == NULL) ||
         (BLAS_daxpy  == NULL) ||
         (BLAS_dswap  == NULL) ||
         (BLAS_ddot   == NULL) ||
         (BLAS_idamax == NULL) ||
+        (BLAS_idamin == NULL) ||
         (BLAS_dload  == NULL) ||
         (BLAS_dnormi == NULL))
       ) {
@@ -162,7 +128,7 @@ MYBOOL load_BLAS(char *libname)
   }
   return( result );
 }
-MYBOOL unload_BLAS()
+MYBOOL unload_BLAS(void)
 {
   return( load_BLAS(NULL) );
 }
@@ -171,14 +137,13 @@ MYBOOL unload_BLAS()
 /* ************************************************************************ */
 /* Now define the unoptimized local BLAS functions                          */
 /* ************************************************************************ */
-void daxpy( int n, double da, double *dx, int incx, double *dy, int incy)
+void daxpy( int n, REAL da, REAL *dx, int incx, REAL *dy, int incy)
 {
   dx++;
   dy++;
   BLAS_daxpy( &n, &da, dx, &incx, dy, &incy);
 }
-/*void BLAS_CALLMODEL my_daxpy( int n, double da, double *dx, int incx, double *dy, int incy)*/
-void BLAS_CALLMODEL my_daxpy( int *_n, double *_da, double *dx, int *_incx, double *dy, int *_incy)
+void BLAS_CALLMODEL my_daxpy( int *_n, REAL *_da, REAL *dx, int *_incx, REAL *dy, int *_incy)
 {
 
 /* constant times a vector plus a vector.
@@ -186,9 +151,12 @@ void BLAS_CALLMODEL my_daxpy( int *_n, double *_da, double *dx, int *_incx, doub
    jack dongarra, linpack, 3/11/78.
    modified 12/3/93, array[1] declarations changed to array[*] */
 
-  int      i, ix, iy, m, mp1;
-  register double rda;
-  double   da = *_da;
+  int      i, ix, iy; 
+#ifndef DOFASTMATH
+  int      m, mp1;
+#endif
+  register REAL rda;
+  REAL     da = *_da;
   int      n = *_n, incx = *_incx, incy = *_incy;
 
   if (n <= 0) return;
@@ -207,13 +175,12 @@ void BLAS_CALLMODEL my_daxpy( int *_n, double *_da, double *dx, int *_incx, doub
 /* CPU intensive loop; option to do pointer arithmetic */
 #if defined DOFASTMATH
   {
-    double *xptr, *yptr;
+    REAL *xptr, *yptr;
     for (i = 1, xptr = dx + ix, yptr = dy + iy;
          i <= n; i++, xptr += incx, yptr += incy)
       (*yptr) += rda*(*xptr);
-    return;
   }
-#endif  
+#else
 
   if (incx==1 && incy==1) goto x20;
 
@@ -242,19 +209,19 @@ x40:
     dy[i + 2]+= rda*dx[i + 2];
     dy[i + 3]+= rda*dx[i + 3];
   }
+#endif  
 }
 
 
 /* ************************************************************************ */
-void dcopy( int n, double *dx, int incx, double *dy, int incy)
+void dcopy( int n, REAL *dx, int incx, REAL *dy, int incy)
 {
   dx++;
   dy++;
   BLAS_dcopy( &n, dx, &incx, dy, &incy);
 }
 
-/*void BLAS_CALLMODEL my_dcopy (int n, double *dx, int incx, double *dy, int incy)*/
-void BLAS_CALLMODEL my_dcopy (int *_n, double *dx, int *_incx, double *dy, int *_incy)
+void BLAS_CALLMODEL my_dcopy (int *_n, REAL *dx, int *_incx, REAL *dy, int *_incy)
 {
 
 /* copies a vector, x, to a vector, y.
@@ -262,37 +229,41 @@ void BLAS_CALLMODEL my_dcopy (int *_n, double *dx, int *_incx, double *dy, int *
    jack dongarra, linpack, 3/11/78.
    modified 12/3/93, array[1] declarations changed to array[*] */
 
-  int      i, ix, iy, m, mp1;
+  int      i, ix, iy;
+#ifndef DOFASTMATH
+  int      m, mp1;
+#endif
   int      n = *_n, incx = *_incx, incy = *_incy;
 
-  if (n<=0) return;
+  if(n<=0) 
+    return;
 
   dx--;
   dy--;
   ix = 1;
   iy = 1;
-  if (incx<0)
+  if(incx<0)
     ix = (-n+1)*incx + 1;
-  if (incy<0)
+  if(incy<0)
     iy = (-n+1)*incy + 1;
 
 
 /* CPU intensive loop; option to do pointer arithmetic */
 #if defined DOFASTMATH
   {
-    double *xptr, *yptr;
+    REAL *xptr, *yptr;
     for (i = 1, xptr = dx + ix, yptr = dy + iy;
          i <= n; i++, xptr += incx, yptr += incy)
       (*yptr) = (*xptr);
-    return;
   }
-#endif
+#else
 
-  if (incx==1 && incy==1) goto x20;
+  if(incx==1 && incy==1) 
+    goto x20;
 
 /* code for unequal increments or equal increments not equal to 1 */
 
-  for (i = 1; i<=n; i++) {
+  for(i = 1; i<=n; i++) {
     dy[iy] = dx[ix];
     ix+= incx;
     iy+= incy;
@@ -303,11 +274,6 @@ void BLAS_CALLMODEL my_dcopy (int *_n, double *dx, int *_incx, double *dy, int *
 
 /* version with fast machine copy logic (requires memory.h or string.h) */
 x20:
-#if defined DOFASTMATH
-  memcpy(&dy[1], &dx[1], n*sizeof(double));
-  return;
-#endif
-
   m = n % 7;
   if (m == 0) goto x40;
   for (i = 1; i<=m; i++)
@@ -325,19 +291,19 @@ x40:
      dy[i + 5] = dx[i + 5];
      dy[i + 6] = dx[i + 6];
   }
+#endif
 }
 
 
 /* ************************************************************************ */
 
-void dscal (int n, double da, double *dx, int incx)
+void dscal (int n, REAL da, REAL *dx, int incx)
 {
   dx++;
   BLAS_dscal (&n, &da, dx, &incx);
 }
 
-/*void BLAS_CALLMODEL my_dscal (int n, double da, double *dx, int incx)*/
-void BLAS_CALLMODEL my_dscal (int *_n, double *_da, double *dx, int *_incx)
+void BLAS_CALLMODEL my_dscal (int *_n, REAL *_da, REAL *dx, int *_incx)
 {
 
 /* Multiply a vector by a constant.
@@ -355,9 +321,12 @@ void BLAS_CALLMODEL my_dscal (int *_n, double *_da, double *dx, int *_incx)
      For I = 0 to N-1, replace DX(IX+I*INCX) with  DA * DX(IX+I*INCX),
      where IX = 1 if INCX .GE. 0, else IX = 1+(1-N)*INCX. */
 
-  int      i, ix, m, mp1;
-  register double rda;
-  double   da = *_da;
+  int      i;
+#ifndef DOFASTMATH
+  int      m, mp1, ix;
+#endif
+  register REAL rda;
+  REAL      da = *_da;
   int      n = *_n, incx = *_incx;
 
   if (n <= 0)
@@ -369,12 +338,11 @@ void BLAS_CALLMODEL my_dscal (int *_n, double *_da, double *dx, int *_incx)
 /* Optionally do fast pointer arithmetic */
 #if defined DOFASTMATH
   {
-    double *xptr;
+    REAL *xptr;
     for (i = 1, xptr = dx + 1; i <= n; i++, xptr += incx)
       (*xptr) *= rda;
-    return;
   }
-#endif
+#else
 
   if (incx == 1)
     goto x20;
@@ -405,20 +373,20 @@ x40:
     dx[i+3] *= rda;
     dx[i+4] *= rda;
   }
+#endif
 }
 
 
 /* ************************************************************************ */
 
-double ddot (int n, double *dx, int incx, double *dy, int incy)
+REAL ddot(int n, REAL *dx, int incx, REAL *dy, int incy)
 {
   dx++;
   dy++;
   return( BLAS_ddot (&n, dx, &incx, dy, &incy) );
 }
 
-/*double BLAS_CALLMODEL my_ddot (int n, double *dx, int incx, double *dy, int incy)*/
-double BLAS_CALLMODEL my_ddot (int *_n, double *dx, int *_incx, double *dy, int *_incy)
+REAL BLAS_CALLMODEL my_ddot(int *_n, REAL *dx, int *_incx, REAL *dy, int *_incy)
 {
 
 /* forms the dot product of two vectors.
@@ -426,14 +394,16 @@ double BLAS_CALLMODEL my_ddot (int *_n, double *dx, int *_incx, double *dy, int 
    jack dongarra, linpack, 3/11/78.
    modified 12/3/93, array[1] declarations changed to array[*] */
 
-/*  long double dtemp; */
-  register double dtemp;
-  int      i, ix, iy, m, mp1;
+  register REAL dtemp;
+  int      i, ix, iy;
+#ifndef DOFASTMATH
+  int      m, mp1;
+#endif
   int      n = *_n, incx = *_incx, incy = *_incy;
 
   dtemp = 0.0;
   if (n<=0)
-    return( (double) dtemp);
+    return( (REAL) dtemp);
 
   dx--;
   dy--;
@@ -448,13 +418,12 @@ double BLAS_CALLMODEL my_ddot (int *_n, double *dx, int *_incx, double *dy, int 
 
 #if defined DOFASTMATH
   {
-    double *xptr, *yptr;
+    REAL *xptr, *yptr;
     for (i = 1, xptr = dx + ix, yptr = dy + iy;
          i <= n; i++, xptr += incx, yptr += incy)
       dtemp+= (*yptr)*(*xptr);
-    return(dtemp);
   }
-#endif
+#else
 
   if (incx==1 && incy==1) goto x20;
 
@@ -485,25 +454,29 @@ x40:
              dx[i + 2]*dy[i + 2] + dx[i + 3]*dy[i + 3] + dx[i + 4]*dy[i + 4];
 
 x60:
+#endif
   return(dtemp);
 }
 
 
 /* ************************************************************************ */
 
-void dswap( int n, double *dx, int incx, double *dy, int incy )
+void dswap( int n, REAL *dx, int incx, REAL *dy, int incy )
 {
   dx++;
   dy++;
   BLAS_dswap( &n, dx, &incx, dy, &incy );
 }
 
-/*void BLAS_CALLMODEL my_dswap( int n, double *dx, int incx, double *dy, int incy )*/
-void BLAS_CALLMODEL my_dswap( int *_n, double *dx, int *_incx, double *dy, int *_incy )
+void BLAS_CALLMODEL my_dswap( int *_n, REAL *dx, int *_incx, REAL *dy, int *_incy )
 {
-  int      i, ix, iy, m, mp1, ns;
-  double   dtemp1, dtemp2, dtemp3;
-  int      n = *_n, incx = *_incx, incy = *_incy;
+  int   i, ix, iy;
+#ifndef DOFASTMATH
+  int   m, mp1, ns;
+  REAL  dtemp2, dtemp3;
+#endif
+  register REAL  dtemp1;
+  int   n = *_n, incx = *_incx, incy = *_incy;
 
   if (n <= 0) return;
 
@@ -519,16 +492,15 @@ void BLAS_CALLMODEL my_dswap( int *_n, double *dx, int *_incx, double *dy, int *
 /* CPU intensive loop; option to do pointer arithmetic */
 #if defined DOFASTMATH
   {
-    double *xptr, *yptr;
+    REAL *xptr, *yptr;
     for (i = 1, xptr = dx + ix, yptr = dy + iy;
          i <= n; i++, xptr += incx, yptr += incy) {
       dtemp1 = (*xptr);
      (*xptr) = (*yptr);
      (*yptr) = dtemp1;
     }
-    return;
   }
-#endif  
+#else
 
   if (incx == incy) {
     if (incx <= 0) goto x5;
@@ -582,20 +554,20 @@ x60:
      dx[i] = dy[i];
      dy[i] = dtemp1;
   }
+#endif
 
 }
 
 
 /* ************************************************************************ */
 
-void dload (int n, double da, double *dx, int incx)
+void dload(int n, REAL da, REAL *dx, int incx)
 {
   dx++;
   BLAS_dload (&n, &da, dx, &incx);
 }
 
-/*void BLAS_CALLMODEL my_dload (int n, double da, double *dx, int incx)*/
-void BLAS_CALLMODEL my_dload (int *_n, double *_da, double *dx, int *_incx)
+void BLAS_CALLMODEL my_dload (int *_n, REAL *_da, REAL *dx, int *_incx)
 {
 /* copies a scalar, a, to a vector, x.
    uses unrolled loops when incx equals one.
@@ -615,9 +587,9 @@ void BLAS_CALLMODEL my_dload (int *_n, double *_da, double *dx, int *_incx)
    comments.  To make a double precision version interchange
     the append and delete operations in these instructions. */
 
-  int      i, ix, m, mp1;
-  double   da = *_da;
-  int      n = *_n, incx = *_incx;
+  int    i, ix, m, mp1;
+  REAL   da = *_da;
+  int    n = *_n, incx = *_incx;
 
   if (n<=0) return;
   dx--;
@@ -657,16 +629,21 @@ x40:
 }
 
 /* ************************************************************************ */
-int idamax( int n, double *x, int is )
+int idamax( int n, REAL *x, int is )
 {
   x++;
   return ( BLAS_idamax( &n, x, &is ) );
 }
 
-/*int BLAS_CALLMODEL my_idamax( int n, double *x, int is )*/
-int BLAS_CALLMODEL my_idamax( int *_n, double *x, int *_is )
+int idamin( int n, REAL *x, int is )
 {
-  double xmax, xtest;
+  x++;
+  return ( BLAS_idamin( &n, x, &is ) );
+}
+
+int BLAS_CALLMODEL my_idamax( int *_n, REAL *x, int *_is )
+{
+  register REAL xmax, xtest;
   int    i, imax = 0;
 #if !defined DOFASTMATH
   int    ii;
@@ -683,7 +660,7 @@ int BLAS_CALLMODEL my_idamax( int *_n, double *x, int *_is )
   xmax = fabs(*x);
   for (i = 2, x += is; i <= n; i++, x += is) {
     xtest = fabs(*x);
-    if (xtest > xmax) {
+    if(xtest > xmax) {
       xmax = xtest;
       imax = i;
     }
@@ -692,40 +669,79 @@ int BLAS_CALLMODEL my_idamax( int *_n, double *x, int *_is )
   x--;
   ii = 1;
   xmax = fabs(x[ii]);
-  for (i = 2, ii+ = is; i <= n; i++, ii+ = is) {
+  for(i = 2, ii+ = is; i <= n; i++, ii+ = is) {
     xtest = fabs(x[ii]);
-	  if (xtest > xmax) {
+    if(xtest > xmax) {
       xmax = xtest;
-		  imax = i;
+      imax = i;
     }
   }
 #endif  
   return(imax);
 }
 
+int BLAS_CALLMODEL my_idamin( int *_n, REAL *x, int *_is )
+{
+  register REAL xmin, xtest;
+  int    i, imin = 0;
+#if !defined DOFASTMATH
+  int    ii;
+#endif
+  int    n = *_n, is = *_is;
+
+  if((n < 1) || (is <= 0))
+    return(imin);
+  imin = 1;
+  if(n == 1)
+    return(imin);
+
+#if defined DOFASTMATH
+  xmin = fabs(*x);
+  for (i = 2, x += is; i <= n; i++, x += is) {
+    xtest = fabs(*x);
+    if(xtest < xmin) {
+      xmin = xtest;
+      imin = i;
+    }
+  }
+#else
+  x--;
+  ii = 1;
+  xmin = fabs(x[ii]);
+  for(i = 2, ii+ = is; i <= n; i++, ii+ = is) {
+    xtest = fabs(x[ii]);
+    if(xtest < xmin) {
+      xmin = xtest;
+      imin = i;
+    }
+  }
+#endif  
+  return(imin);
+}
 
 /* ************************************************************************ */
-double dnormi( int n, double *x )
+REAL dnormi( int n, REAL *x )
 {
   x++;
   return( BLAS_dnormi( &n, x ) );
 }
 
-/*double BLAS_CALLMODEL my_dnormi( int n, double *x )*/
-double BLAS_CALLMODEL my_dnormi( int *_n, double *x )
+REAL BLAS_CALLMODEL my_dnormi( int *_n, REAL *x )
 {
 /* ===============================================================
    dnormi  returns the infinity-norm of the vector x.
    =============================================================== */
    int      j;
-   register double hold;
+   register REAL hold, absval;
    int      n = *_n;
 
    x--;
    hold = 0.0;
 /*   for(j = 1; j <= n; j++) */
-   for(j = n; j > 0; j--)
-     hold = MAX( hold, fabs(x[j]) );
+   for(j = n; j > 0; j--) {
+     absval = fabs(x[j]);
+     hold = MAX( hold, absval );
+   }
 
    return( hold );
 }
@@ -764,7 +780,7 @@ void randomseed(int seeds[])
   seeds[3] = 345678;
 }
 
-void randomdens( int n, double *x, double r1, double r2, double densty, int *seeds )
+void randomdens( int n, REAL *x, REAL r1, REAL r2, REAL densty, int *seeds )
 {
 /* ------------------------------------------------------------------
    random  generates a vector x[*] of random numbers
@@ -773,9 +789,9 @@ void randomdens( int n, double *x, double r1, double r2, double densty, int *see
    ------------------------------------------------------------------ */
 
   int   i;
-  double  *y;
+  REAL  *y;
 
-  y = (double *) malloc(sizeof(*y) * (n+1));
+  y = (REAL *) malloc(sizeof(*y) * (n+1));
   ddrand( n, x, 1, seeds );
   ddrand( n, y, 1, seeds );
 
@@ -791,7 +807,7 @@ void randomdens( int n, double *x, double r1, double r2, double densty, int *see
 
 /* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-void ddrand( int n, double *x, int incx, int *seeds )
+void ddrand( int n, REAL *x, int incx, int *seeds )
 {
 
 /* ------------------------------------------------------------------
@@ -822,9 +838,9 @@ void ddrand( int n, double *x, int incx, int *seeds )
      if (seeds[2] < 0) seeds[2] = seeds[2] + 30307;
      if (seeds[3] < 0) seeds[3] = seeds[3] + 30323;
 
-	 x[ix]  = ((double) seeds[1])/30269.0 +
-             ((double) seeds[2])/30307.0 +
-             ((double) seeds[3])/30323.0;
+	 x[ix]  = ((REAL) seeds[1])/30269.0 +
+              ((REAL) seeds[2])/30307.0 +
+              ((REAL) seeds[3])/30323.0;
      xix    = (int) x[ix];
 	 x[ix]  = fabs(x[ix] - xix);
    }

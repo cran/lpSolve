@@ -31,14 +31,17 @@
                                 moved tests for tiny update higher. Previous
                                 logic can be simulated by disabling the compiler
                                 define ApplySteepestEdgeMinimum.
-    v1.1.0  1 July 2004         Renamed from lp_pricerPSE to lp_pricePSE in 
+    v1.1.0  1 July 2004         Renamed from lp_pricerPSE to lp_pricePSE in
                                 conjuction with the creation of a separate
-                                price library.                            
+                                price library.
+    v1.2.0  1 March 2005        Changed memory allocation routines to use
+                                standard lp_solve functions, improve error handling
+                                and return boolean status values.
 
    ----------------------------------------------------------------------------------
 */
 
-STATIC MYBOOL applyPricer(lprec *lp)
+INLINE MYBOOL applyPricer(lprec *lp)
 {
   int rule = get_piv_rule(lp);
   return( (MYBOOL) ((rule == PRICER_DEVEX) || (rule == PRICER_STEEPESTEDGE)) );
@@ -54,35 +57,36 @@ STATIC void simplexPricer(lprec *lp, MYBOOL isdual)
 
 STATIC void freePricer(lprec *lp)
 {
-  if(lp->edgeVector != NULL) {
-    FREE(lp->edgeVector);
-  }
+  FREE(lp->edgeVector);
 }
 
 
-STATIC void resizePricer(lprec *lp)
+STATIC MYBOOL resizePricer(lprec *lp)
 {
   if(!applyPricer(lp))
-    return;
+    return( TRUE );
 
   /* Reallocate vector for new size */
-  lp->edgeVector = (REAL *) realloc(lp->edgeVector, (lp->sum_alloc + 1) * sizeof(*lp->edgeVector));
+  if(!allocREAL(lp, &(lp->edgeVector), lp->sum_alloc+1, AUTOMATIC))
+    return( FALSE );
 
   /* Signal that we have not yet initialized the price vector */
   MEMCLEAR(lp->edgeVector, lp->sum_alloc+1);
   lp->edgeVector[0] = -1;
+  return( TRUE );
 }
 
 
-STATIC void initPricer(lprec *lp)
+STATIC MYBOOL initPricer(lprec *lp)
 {
   if(!applyPricer(lp))
-    return;
+    return( FALSE );
 
   /* Free any pre-existing pricer */
   freePricer(lp);
+
   /* Allocate vector to fit current problem size */
-  resizePricer(lp);
+  return( resizePricer(lp) );
 }
 
 
@@ -130,14 +134,14 @@ STATIC REAL getPricer(lprec *lp, int item, MYBOOL isdual)
   }
 }
 
-STATIC void restartPricer(lprec *lp, MYBOOL isdual)
+STATIC MYBOOL restartPricer(lprec *lp, MYBOOL isdual)
 {
-  REAL   *sEdge, seNorm, hold;
+  REAL   *sEdge = NULL, seNorm, hold;
   int    i, j, m;
-  MYBOOL isDEVEX;
+  MYBOOL isDEVEX, ok = applyPricer(lp);
 
-  if(!applyPricer(lp))
-    return;
+  if(!ok)
+    return( ok );
 
   /* Store the active/current pricing type */
   if(isdual == AUTOMATIC)
@@ -153,7 +157,7 @@ STATIC void restartPricer(lprec *lp, MYBOOL isdual)
     isDEVEX = is_piv_mode(lp, PRICE_PRIMALFALLBACK);
 
   /* Check if we only need to do the simple DEVEX initialization */
-  if(isDEVEX && !DEVEX_ENHANCED) {
+  if(!is_piv_mode(lp, PRICE_TRUENORMINIT)) {
     if(isdual) {
       for(i = 1; i <= m; i++)
         lp->edgeVector[lp->var_basic[i]] = 1.0;
@@ -163,11 +167,13 @@ STATIC void restartPricer(lprec *lp, MYBOOL isdual)
         if(!lp->is_basic[i])
           lp->edgeVector[i] = 1.0;
     }
-    return;
+    return( ok );
   }
 
   /* Otherwise do the full Steepest Edge norm initialization */
-  sEdge = (REAL *) malloc((m + 1) * sizeof(*sEdge));
+  ok = allocREAL(lp, &sEdge, m+1, FALSE);
+  if(!ok)
+    return( ok );
 
   if(isdual) {
 
@@ -211,20 +217,25 @@ STATIC void restartPricer(lprec *lp, MYBOOL isdual)
 
   }
 
-  free(sEdge);
+  FREE(sEdge);
+
+  return( ok );
 
 }
 
 
-STATIC void formWeights(lprec *lp, int colnr, REAL *pcol, REAL **w)
+STATIC MYBOOL formWeights(lprec *lp, int colnr, REAL *pcol, REAL **w)
 /* This computes Bw = a, where B is the basis and a is a column of A */
 {
-  allocREAL(lp, w, lp->rows+1, FALSE);
-  if(pcol == NULL)
-    fsolve(lp, colnr, *w, NULL, 0.0, 0.0, FALSE);
-  else {
-    MEMCOPY(*w, pcol, lp->rows+1);
+  MYBOOL ok = allocREAL(lp, w, lp->rows+1, FALSE);
+
+  if(ok) {
+    if(pcol == NULL)
+      fsolve(lp, colnr, *w, NULL, 0.0, 0.0, FALSE);
+    else {
+      MEMCOPY(*w, pcol, lp->rows+1);
 /*    *w[0] = 0; */ /* Test */
+    }
   }
 /*
   if(pcol != NULL) {
@@ -242,6 +253,7 @@ STATIC void formWeights(lprec *lp, int colnr, REAL *pcol, REAL **w)
       report(lp, SEVERE, "updatePricer: MRS error is %g\n", cEdge);
   }
 */
+  return(ok);
 }
 STATIC void freeWeights(REAL *w)
 {
@@ -249,19 +261,19 @@ STATIC void freeWeights(REAL *w)
 }
 
 
-STATIC void updatePricer(lprec *lp, int rownr, int colnr, REAL *pcol, REAL *prow, int *nzprow)
+STATIC MYBOOL updatePricer(lprec *lp, int rownr, int colnr, REAL *pcol, REAL *prow, int *nzprow)
 {
   REAL   *vEdge = NULL, cEdge, hold, *newEdge, *w = NULL;
   int    i, m, n, exitcol, errlevel = DETAILED;
-  MYBOOL forceRefresh = FALSE, isDual, isDEVEX;
+  MYBOOL forceRefresh = FALSE, isDual, isDEVEX, ok = FALSE;
 
   if(!applyPricer(lp))
-    return;
+    return(ok);
 
   /* Make sure we have something to update */
   hold = lp->edgeVector[0];
   if(hold < 0)
-    return;
+    return(ok);
   isDual = (MYBOOL) (hold > 0);
 
   /* Do common initializations and computations */
@@ -271,8 +283,13 @@ STATIC void updatePricer(lprec *lp, int rownr, int colnr, REAL *pcol, REAL *prow
   exitcol = lp->var_basic[rownr];
 
   /* Solve/copy Bw = a */
-/*  formWeights(lp, colnr, NULL, &w);  Experimental */
-  formWeights(lp, colnr, pcol, &w);
+#if 0
+  ok = formWeights(lp, colnr, NULL, &w);  /* Compute from scratch - Experimental */
+#else
+  ok = formWeights(lp, colnr, pcol, &w);  /* Use previously computed values */
+#endif
+  if(!ok)
+    return( ok );
 
   /* Price norms for the dual simplex - the basic columns */
   if(isDual) {
@@ -281,7 +298,9 @@ STATIC void updatePricer(lprec *lp, int rownr, int colnr, REAL *pcol, REAL *prow
 
     /* Don't need to compute cross-products with DEVEX */
     if(!isDEVEX) {
-      allocREAL(lp, &vEdge, m+1, FALSE);
+      ok = allocREAL(lp, &vEdge, m+1, FALSE);
+      if(!ok)
+        return( ok );
 
     /* Extract the row of the inverse containing the leaving variable
        and then form the dot products against the other variables, i.e. "Tau" */
@@ -300,14 +319,10 @@ STATIC void updatePricer(lprec *lp, int rownr, int colnr, REAL *pcol, REAL *prow
     hold = 1 / rw;
     lp->edgeVector[colnr] = (hold*hold) * cEdge;
 
-   /* Possibly adjust initial value in case of Devex */
-    if(isDEVEX && !DEVEX_ENHANCED && (lp->edgeVector[colnr] < DEVEX_MINVALUE))
-      lp->edgeVector[colnr] = DEVEX_MINVALUE;
-
 #ifdef Paranoia
     if(lp->edgeVector[colnr] <= lp->epsmachine)
-      report(lp, errlevel, "updatePricer: Invalid dual norm %g at entering index %d - iteration %d\n",
-                           lp->edgeVector[colnr], rownr, lp->total_iter+lp->current_iter);
+      report(lp, errlevel, "updatePricer: Invalid dual norm %g at entering index %d - iteration %.0f\n",
+                           lp->edgeVector[colnr], rownr, (double) (lp->total_iter+lp->current_iter));
 #endif
 
    /* Then loop over all basic variables, but skip the leaving row */
@@ -333,11 +348,11 @@ STATIC void updatePricer(lprec *lp, int rownr, int colnr, REAL *pcol, REAL *prow
       else {
         *newEdge -= 2*hold*vEdge[i];
 #ifdef xxApplySteepestEdgeMinimum
-        *newEdge = my_max(*newEdge, hold*hold+1); /* Kludge; use the primal lower bound */
+        SETMAX(*newEdge, hold*hold+1); /* Kludge; use the primal lower bound */
 #else
         if(*newEdge <= 0) {
-          report(lp, errlevel, "updatePricer: Invalid dual norm %g at index %d - iteration %d\n",
-                                *newEdge, i, lp->total_iter+lp->current_iter);
+          report(lp, errlevel, "updatePricer: Invalid dual norm %g at index %d - iteration %.0f\n",
+                                *newEdge, i, (double) (lp->total_iter+lp->current_iter));
           forceRefresh = TRUE;
           break;
         }
@@ -350,33 +365,46 @@ STATIC void updatePricer(lprec *lp, int rownr, int colnr, REAL *pcol, REAL *prow
   /* Price norms for the primal simplex - the non-basic columns */
   else {
 
-    REAL *vTemp, *vAlpha, cAlpha;
-    int  varScope = SCAN_ALLVARS+USE_NONBASICVARS;
+    REAL *vTemp = NULL, *vAlpha = NULL, cAlpha;
+    int  *coltarget;
 
-    allocREAL(lp, &vTemp, m+1, TRUE);
-    allocREAL(lp, &vAlpha, n+1, TRUE);
+    ok = allocREAL(lp, &vTemp, m+1, TRUE) &&
+         allocREAL(lp, &vAlpha, n+1, TRUE);
+    if(!ok)
+      return( ok );
 
     /* Check if we have strategy fallback for the primal */
     if(!isDEVEX)
       isDEVEX = is_piv_mode(lp, PRICE_PRIMALFALLBACK);
 
+    /* Initialize column target array */
+    coltarget = (int *) mempool_obtainVector(lp->workarrays, lp->sum+1, sizeof(*coltarget));
+    ok = get_colIndexA(lp, SCAN_SLACKVARS+SCAN_USERVARS+USE_NONBASICVARS, coltarget, FALSE);
+    if(!ok) {
+      mempool_releaseVector(lp->workarrays, (char *) coltarget, FALSE);
+      return( ok );
+    }
+
     /* Don't need to compute cross-products with DEVEX */
     if(!isDEVEX) {
-      vEdge = (REAL *) calloc((n + 1), sizeof(*vEdge));
+      ok = allocREAL(lp, &vEdge, n+1, TRUE);
+      if(!ok)
+        return( ok );
 
       /* Compute v and then N'v */
       MEMCOPY(vTemp, w, m+1);
       bsolve(lp, -1, vTemp, NULL, lp->epsmachine*DOUBLEROUND, 0.0);
       vTemp[0] = 0;
-      prod_xA(lp, varScope, vTemp, NULL, XRESULT_FREE, lp->epsmachine, 0.0, 
-                            vEdge, NULL);
+      prod_xA(lp, coltarget, vTemp, NULL, lp->epsmachine, 0.0,
+                             vEdge, NULL, MAT_ROUNDDEFAULT);
     }
 
     /* Compute Sigma and then Alpha */
     bsolve(lp, rownr, vTemp, NULL, 0*DOUBLEROUND, 0.0);
     vTemp[0] = 0;
-    prod_xA(lp, varScope, vTemp, NULL, XRESULT_FREE, lp->epsmachine, 0.0, 
-                          vAlpha, NULL);
+    prod_xA(lp, coltarget, vTemp, NULL, lp->epsmachine, 0.0,
+                           vAlpha, NULL, MAT_ROUNDDEFAULT);
+    mempool_releaseVector(lp->workarrays, (char *) coltarget, FALSE);
 
     /* Update the squared steepest edge norms; first store some constants */
     cEdge = lp->edgeVector[colnr];
@@ -386,14 +414,10 @@ STATIC void updatePricer(lprec *lp, int rownr, int colnr, REAL *pcol, REAL *prow
     hold = 1 / cAlpha;
     lp->edgeVector[exitcol] = (hold*hold) * cEdge;
 
-   /* Possibly adjust initial value in case of Devex */
-    if(isDEVEX && !DEVEX_ENHANCED && (lp->edgeVector[exitcol] < DEVEX_MINVALUE))
-      lp->edgeVector[exitcol] = DEVEX_MINVALUE;
-
 #ifdef Paranoia
     if(lp->edgeVector[exitcol] <= lp->epsmachine)
-      report(lp, errlevel, "updatePricer: Invalid primal norm %g at leaving index %d - iteration %d\n",
-                          lp->edgeVector[exitcol], exitcol, lp->total_iter+lp->current_iter);
+      report(lp, errlevel, "updatePricer: Invalid primal norm %g at leaving index %d - iteration %.0f\n",
+                          lp->edgeVector[exitcol], exitcol, (double) (lp->total_iter+lp->current_iter));
 #endif
 
     /* Then loop over all non-basic variables, but skip the entering column */
@@ -418,11 +442,11 @@ STATIC void updatePricer(lprec *lp, int rownr, int colnr, REAL *pcol, REAL *prow
       else {
         *newEdge -= 2*hold*vEdge[i];
 #ifdef ApplySteepestEdgeMinimum
-        *newEdge = my_max(*newEdge, hold*hold+1);
+        SETMAX(*newEdge, hold*hold+1);
 #else
         if(*newEdge < 0) {
-          report(lp, errlevel, "updatePricer: Invalid primal norm %g at index %d - iteration %d\n",
-                               *newEdge, i, lp->total_iter+lp->current_iter);
+          report(lp, errlevel, "updatePricer: Invalid primal norm %g at index %d - iteration %.0f\n",
+                               *newEdge, i, (double) (lp->total_iter+lp->current_iter));
           if(lp->spx_trace)
             report(lp, errlevel, "Error detail: (RelAlpha=%g, vEdge=%g, cEdge=%g)\n", hold, vEdge[i], cEdge);
           forceRefresh = TRUE;
@@ -437,30 +461,35 @@ STATIC void updatePricer(lprec *lp, int rownr, int colnr, REAL *pcol, REAL *prow
 
   }
 
-  if(vEdge != NULL)
-    FREE(vEdge);
+  FREE(vEdge);
   freeWeights(w);
 
   if(forceRefresh)
-    restartPricer(lp, AUTOMATIC);
+    ok = restartPricer(lp, AUTOMATIC);
+  else
+    ok = TRUE;
+
+  return( ok );
 
 }
 
 
-STATIC void verifyPricer(lprec *lp)
+STATIC MYBOOL verifyPricer(lprec *lp)
 {
   REAL value;
   int  i, n;
+  MYBOOL ok = applyPricer(lp);
 
-  if(!applyPricer(lp))
-    return;
+  if(!ok)
+    return( ok );
+  ok = FALSE;
 
   /* Verify */
   if(lp->edgeVector == NULL)
-    return;
+    return( ok );
   value = *lp->edgeVector;
   if(value < 0)
-    return;
+    return( ok );
 
   /* Check the primal */
   n = 1;
@@ -484,10 +513,12 @@ STATIC void verifyPricer(lprec *lp)
     }
   }
 
+  ok = (MYBOOL) (n == 0);
 #ifdef Paranoia
-  if(n > 0)
+  if(!ok)
     report(lp, SEVERE, "verifyPricer: Invalid norm %g at index %d\n",
                        value, n);
 #endif
+  return( ok );
 }
 

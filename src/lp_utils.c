@@ -1,20 +1,15 @@
 #define CODE_lp_utils
 
-#include "string.h"
+#include <string.h>
 #include "commonlib.h"
 #include "lp_lib.h"
 #include "lp_utils.h"
-#ifdef INTEGERTIME
-  #include <time.h>
-#else
-  #include <sys/timeb.h>
-#endif
+#include <time.h>
+#include <sys/timeb.h>
 
 #ifdef FORTIFY
 # include "lp_fortify.h"
 #endif
-
-#include "limits.h"
 
 
 /*
@@ -30,6 +25,9 @@
     v1.0.0  1 January 2003      Memory allocation, sorting, searching, time and
                                 doubly linked list functions.
     v1.1.0  15 May 2004         Added vector packing functionality
+    v1.2.0  10 January 2005     Added vector pushing/popping functionality
+                                Modified return values and fixed problem in
+                                linked list functions.
 
    ----------------------------------------------------------------------------------
 */
@@ -41,12 +39,13 @@ STATIC MYBOOL allocCHAR(lprec *lp, char **ptr, int size, MYBOOL clear)
   else if(clear & AUTOMATIC) {
     *ptr = (char *) realloc(*ptr, size * sizeof(**ptr));
     if(clear & TRUE)
-      memset(*ptr, '\0', size * sizeof(**ptr));
+      MEMCLEAR(*ptr, size);
   }
   else
     *ptr = (char *) malloc(size * sizeof(**ptr));
   if(((*ptr) == NULL) && (size > 0)) {
-    lp->report(lp, CRITICAL, "alloc of %d bytes failed\n", size * sizeof(**ptr));
+    lp->report(lp, CRITICAL, "alloc of %d 'char' failed\n", size);
+    lp->spx_status = NOMEMORY;
     return( FALSE );
   }
   else
@@ -59,12 +58,13 @@ STATIC MYBOOL allocMYBOOL(lprec *lp, MYBOOL **ptr, int size, MYBOOL clear)
   else if(clear & AUTOMATIC) {
     *ptr = (MYBOOL *) realloc(*ptr, size * sizeof(**ptr));
     if(clear & TRUE)
-      memset(*ptr, '\0', size * sizeof(**ptr));
+      MEMCLEAR(*ptr, size);
   }
   else
     *ptr = (MYBOOL *) malloc(size * sizeof(**ptr));
   if(((*ptr) == NULL) && (size > 0)) {
-    lp->report(lp, CRITICAL, "alloc of %d bytes failed\n", size * sizeof(**ptr));
+    lp->report(lp, CRITICAL, "alloc of %d 'MYBOOL' failed\n", size);
+    lp->spx_status = NOMEMORY;
     return( FALSE );
   }
   else
@@ -77,12 +77,13 @@ STATIC MYBOOL allocINT(lprec *lp, int **ptr, int size, MYBOOL clear)
   else if(clear & AUTOMATIC) {
     *ptr = (int *) realloc(*ptr, size * sizeof(**ptr));
     if(clear & TRUE)
-      memset(*ptr, '\0', size * sizeof(**ptr));
+      MEMCLEAR(*ptr, size);
   }
   else
     *ptr = (int *) malloc(size * sizeof(**ptr));
   if(((*ptr) == NULL) && (size > 0)) {
-    lp->report(lp, CRITICAL, "alloc of %d bytes failed\n", size * sizeof(**ptr));
+    lp->report(lp, CRITICAL, "alloc of %d 'INT' failed\n", size);
+    lp->spx_status = NOMEMORY;
     return( FALSE );
   }
   else
@@ -95,12 +96,13 @@ STATIC MYBOOL allocREAL(lprec *lp, REAL **ptr, int size, MYBOOL clear)
   else if(clear & AUTOMATIC) {
     *ptr = (REAL *) realloc(*ptr, size * sizeof(**ptr));
     if(clear & TRUE)
-      memset(*ptr, '\0', size * sizeof(**ptr));
+      MEMCLEAR(*ptr, size);
   }
   else
     *ptr = (REAL *) malloc(size * sizeof(**ptr));
   if(((*ptr) == NULL) && (size > 0)) {
-    lp->report(lp, CRITICAL, "alloc of %d bytes failed\n", size * sizeof(**ptr));
+    lp->report(lp, CRITICAL, "alloc of %d 'REAL' failed\n", size);
+    lp->spx_status = NOMEMORY;
     return( FALSE );
   }
   else
@@ -113,12 +115,13 @@ STATIC MYBOOL allocLREAL(lprec *lp, LREAL **ptr, int size, MYBOOL clear)
   else if(clear & AUTOMATIC) {
     *ptr = (LREAL *) realloc(*ptr, size * sizeof(**ptr));
     if(clear & TRUE)
-      memset(*ptr, '\0', size * sizeof(**ptr));
+      MEMCLEAR(*ptr, size);
   }
   else
     *ptr = (LREAL *) malloc(size * sizeof(**ptr));
   if(((*ptr) == NULL) && (size > 0)) {
-    lp->report(lp, CRITICAL, "alloc of %d bytes failed\n", size * sizeof(**ptr));
+    lp->report(lp, CRITICAL, "alloc of %d 'LREAL' failed\n", size);
+    lp->spx_status = NOMEMORY;
     return( FALSE );
   }
   else
@@ -135,11 +138,87 @@ STATIC MYBOOL allocFREE(lprec *lp, void **ptr)
   }
   else {
     status = FALSE;
-    lp->report(lp, CRITICAL, "free failed on line %d of file %s\n",
+    lp->report(lp, CRITICAL, "free() failed on line %d of file %s\n",
                              __LINE__, __FILE__);
   }
   return(status);
 }
+
+/* Do hoops to provide debugging info with FORTIFY */
+#undef CODE_lp_utils
+#include "lp_utils.h"
+/* alloc-routines should always be before this line! */
+
+#if 0
+!if !defined INLINE
+void set_biton(MYBOOL *bitarray, int item)
+{
+  bitarray[item / 8] |= (1 << (item % 8));
+}
+void set_bitoff(MYBOOL *bitarray, int item)
+{
+  bitarray[item / 8] &= ~(1 << (item % 8));
+}
+MYBOOL is_biton(MYBOOL *bitarray, int item)
+{
+  return( (MYBOOL) ((bitarray[item / 8] & (1 << (item % 8))) != 0) );
+}
+!endif
+#endif
+int comp_bits(MYBOOL *bitarray1, MYBOOL *bitarray2, int items)
+{
+  int            i, items4, left = 0, right = 0;
+  MYBOOL         comp1;
+  unsigned long comp4;
+
+  /* Convert items count to 8-bit representation, if necessary */
+  if(items > 0) {
+    i = items % 8;
+    items /= 8;
+    if(i)
+      items++;
+  }
+  else
+    items = -items;
+
+  /* Do the wide unsigned integer part for speed */
+  items4 = items / sizeof(unsigned long);
+  i = 0;
+  while(i < items4) {
+    comp4 = ((unsigned long *) bitarray1)[i] &  ~((unsigned long *) bitarray2)[i];
+    if(comp4)
+      left++;
+    comp4 = ((unsigned long *) bitarray2)[i] &  ~((unsigned long *) bitarray1)[i];
+    if(comp4)
+      right++;
+    i++;
+  }
+
+  /* Do the trailing slow narrow unsigned integer part */
+  i *= sizeof(unsigned long);
+  i++;
+  while(i < items) {
+    comp1 = bitarray1[i] & ~bitarray2[i];
+    if(comp1)
+      left++;
+    comp1 = bitarray2[i] & ~bitarray1[i];
+    if(comp1)
+      right++;
+    i++;
+  }
+
+  /* Determine set comparison outcomes */
+  if((left > 0) && (right == 0))         /* array1 is a superset of array2 */
+    i = 1;
+  else if((left == 0) && (right > 0))   /* array2 is a superset of array1 */
+    i = -1;
+  else if((left == 0) && (right == 0))  /* array1 and array2 are identical */
+    i = 0;
+  else
+    i = -2;                              /* indicate all other outcomes */
+  return( i );
+}
+
 
 STATIC workarraysrec *mempool_create(lprec *lp)
 {
@@ -150,12 +229,56 @@ STATIC workarraysrec *mempool_create(lprec *lp)
 }
 STATIC char *mempool_obtainVector(workarraysrec *mempool, int count, int unitsize)
 {
-  char *newmem = NULL;
+  char   *newmem = NULL;
   MYBOOL *bnewmem = NULL;
-  int *inewmem = NULL;
-  REAL *rnewmem = NULL;
+  int    *inewmem = NULL, size, i, ib, ie, memMargin = 0;
+  REAL   *rnewmem = NULL;
 
-  if(unitsize == sizeof(MYBOOL)) {
+  /* First find the iso-sized window (binary search) */
+  size = count*unitsize;
+  memMargin += size;
+  ib = 0;
+  ie = mempool->count-1;
+  while(ie >= ib) {
+    i = (ib+ie) / 2;
+    if(abs(mempool->vectorsize[i]) > memMargin)
+      ie = i-1;
+    else if(abs(mempool->vectorsize[i]) < size)
+      ib = i+1;
+    else {
+      /* Find the beginning of the exact-sized array group */
+      do {
+        ib = i;
+        i--;
+      } while((i >= 0) && (abs(mempool->vectorsize[i]) >= size));
+      break;
+    }
+  }
+
+  /* Check if we have a preallocated unused array of sufficient size */
+  ie = mempool->count-1;
+  for(i = ib; i <= ie; i++)
+    if(mempool->vectorsize[i] < 0)
+      break;
+
+  /* Obtain and activate existing, unused vector if we are permitted */
+  if(i <= ie) {
+#ifdef Paranoia
+    if((mempool->vectorsize[i] > 0) || (abs(mempool->vectorsize[i]) < size)) {
+      lprec *lp = mempool->lp;
+      lp->report(lp, SEVERE, "mempool_obtainVector: Invalid %s existing vector selected\n",
+                             (ie < 0 ? "too small" : "occupied"));
+      lp->spx_status = NOMEMORY;
+      lp->bb_break = TRUE;
+      return( newmem );
+    }
+#endif
+    newmem = mempool->vectorarray[i];
+    mempool->vectorsize[i] *= -1;
+  }
+
+  /* Otherwise allocate a new vector */
+  else if(unitsize == sizeof(MYBOOL)) {
     allocMYBOOL(mempool->lp, &bnewmem, count, TRUE);
     newmem = (char *) bnewmem;
   }
@@ -168,33 +291,51 @@ STATIC char *mempool_obtainVector(workarraysrec *mempool, int count, int unitsiz
     newmem = (char *) rnewmem;
   }
 
-  if(newmem != NULL) {
+  /* Insert into master array if necessary (maintain sort by ascending size) */
+  if((i > ie) && (newmem != NULL)) {
     mempool->count++;
     if(mempool->count >= mempool->size) {
       mempool->size += 10;
       mempool->vectorarray = (char **) realloc(mempool->vectorarray,
-                                               sizeof(*(mempool->vectorarray))*mempool->size);
+                                     sizeof(*(mempool->vectorarray))*mempool->size);
+      mempool->vectorsize  = (int *) realloc(mempool->vectorsize,
+                                     sizeof(*(mempool->vectorsize))*mempool->size);
     }
-    mempool->vectorarray[mempool->count-1] = newmem;
+    ie++;
+    i = ie + 1;
+    if(i < mempool->count) {
+      MEMMOVE(mempool->vectorarray+i, mempool->vectorarray+ie, 1);
+      MEMMOVE(mempool->vectorsize+i,  mempool->vectorsize+ie,  1);
+    }
+    mempool->vectorarray[ie] = newmem;
+    mempool->vectorsize[ie]  = size;
   }
 
   return( newmem );
 }
-STATIC MYBOOL mempool_releaseVector(workarraysrec *mempool, char *memvector)
+STATIC MYBOOL mempool_releaseVector(workarraysrec *mempool, char *memvector, MYBOOL forcefree)
 {
   int i;
+
+#if 0
+  forcefree = TRUE;
+#endif
 
   for(i = mempool->count-1; i >= 0; i--)
     if(mempool->vectorarray[i] == memvector)
       break;
 
-  if(i < 0)
+  if((i < 0) || (mempool->vectorsize[i] < 0))
     return( FALSE );
 
-  FREE(mempool->vectorarray[i]);
-  mempool->count--;
-  for(; i < mempool->count; i++)
-    mempool->vectorarray[i] = mempool->vectorarray[i+1];
+  if(forcefree) {
+    FREE(mempool->vectorarray[i]);
+    mempool->count--;
+    for(; i < mempool->count; i++)
+      mempool->vectorarray[i] = mempool->vectorarray[i+1];
+  }
+  else
+    mempool->vectorsize[i] *= -1;
 
   return( TRUE );
 }
@@ -204,8 +345,12 @@ STATIC MYBOOL mempool_free(workarraysrec **mempool)
 
   while(i > 0) {
     i--;
-    mempool_releaseVector(*mempool, (*mempool)->vectorarray[i]);
+    if((*mempool)->vectorsize[i] < 0)  /* Handle unused vectors */
+      (*mempool)->vectorsize[i] *= -1;
+    mempool_releaseVector(*mempool, (*mempool)->vectorarray[i], TRUE);
   }
+  FREE((*mempool)->vectorarray);
+  FREE((*mempool)->vectorsize);
   FREE(*mempool);
   return( TRUE );
 }
@@ -244,7 +389,6 @@ STATIC void roundVector(LREAL *myvector, int endpos, LREAL roundzero)
     for(; endpos >= 0; myvector++, endpos--)
       if(fabs(*myvector) < roundzero)
         *myvector = 0;
-/*      my_round((*myvector), roundzero); */ /* Experimental */
 }
 
 STATIC REAL normalizeVector(REAL *myvector, int endpos)
@@ -273,21 +417,21 @@ STATIC REAL normalizeVector(REAL *myvector, int endpos)
 
 STATIC void swapINT(int *item1, int *item2)
 {
-  STATIC int hold = *item1;
+  int hold = *item1;
   *item1 = *item2;
   *item2 = hold;
 }
 
 STATIC void swapREAL(REAL *item1, REAL *item2)
 {
-  STATIC REAL hold = *item1;
+  REAL hold = *item1;
   *item1 = *item2;
   *item2 = hold;
 }
 
 STATIC void swapPTR(void **item1, void **item2)
 {
-  STATIC void *hold;
+  void *hold;
   hold = *item1;
   *item1 = *item2;
   *item2 = hold;
@@ -296,7 +440,7 @@ STATIC void swapPTR(void **item1, void **item2)
 
 STATIC REAL restoreINT(REAL valREAL, REAL epsilon)
 {
-  STATIC REAL valINT, fracREAL, fracABS;
+  REAL valINT, fracREAL, fracABS;
 
   fracREAL = modf(valREAL, &valINT);
   fracABS = fabs(fracREAL);
@@ -316,13 +460,10 @@ STATIC REAL roundToPrecision(REAL value, REAL precision)
 #if 1
   REAL  vmod;
   int   vexp2, vexp10;
-# undef __HYPER
-# ifdef WIN32
-#  define __HYPER hyper
-# else
-#  define __HYPER long
-# endif
-  __HYPER sign;
+  LLONG sign;
+
+  if(precision == 0)
+    return(value);
 
   sign  = my_sign(value);
   value = fabs(value);
@@ -332,10 +473,9 @@ STATIC REAL roundToPrecision(REAL value, REAL precision)
     return( 0 );
   else if(value == floor(value))
     return( value*sign );
-/*  else if((value < (REAL) MAXINT64) && */
-  else if((value < (REAL) ULONG_MAX) &&
+  else if((value < (REAL) MAXINT64) &&
      (modf((REAL) (value+precision), &vmod) < precision)) {
-    sign *= (__HYPER) (value+precision);
+    sign *= (LLONG) (value+precision);
     return( (REAL) sign );
   }
 
@@ -470,6 +610,22 @@ STATIC void chsign_bounds(REAL *lobound, REAL *upbound)
 
 
 /* ---------------------------------------------------------------------------------- */
+/* Define randomization routine                                                       */
+/* ---------------------------------------------------------------------------------- */
+STATIC REAL rand_uniform(lprec *lp, REAL range)
+{
+  static MYBOOL randomized = FALSE;
+
+  if(!randomized) {
+    srand((unsigned) time( NULL ));
+    randomized = TRUE;
+  }
+  range *= (REAL) rand() / (REAL) RAND_MAX;
+  return( range );
+}
+
+
+/* ---------------------------------------------------------------------------------- */
 /* Define routines for doubly linked lists of integers                                */
 /* ---------------------------------------------------------------------------------- */
 
@@ -501,6 +657,9 @@ STATIC int createLink(int size, LLrec **linkmap, MYBOOL *usedpos)
         /* Set the backward link */
         (*linkmap)->map[size+i] = j;
         j = i;
+        if((*linkmap)->count == 0)
+          (*linkmap)->firstitem = i;
+        (*linkmap)->lastitem = i;
         (*linkmap)->count++;
       }
   }
@@ -576,6 +735,9 @@ STATIC MYBOOL appendLink(LLrec *linkmap, int newitem)
   linkmap->map[2*size+1] = newitem;
 
   /* Update count and return */
+  if(linkmap->count == 0)
+    linkmap->firstitem = newitem;
+  linkmap->lastitem = newitem;
   linkmap->count++;
 
   return( TRUE );
@@ -603,10 +765,20 @@ STATIC MYBOOL insertLink(LLrec *linkmap, int afteritem, int newitem)
     linkmap->map[size+newitem] = afteritem;
 
     /* Update count */
+    SETMIN(linkmap->firstitem, newitem);
+    SETMAX(linkmap->lastitem, newitem);
     linkmap->count++;
   }
 
   return( TRUE );
+}
+
+STATIC MYBOOL setLink(LLrec *linkmap, int newitem)
+{
+  if(isActiveLink(linkmap, newitem))
+    return( FALSE );
+  else
+    return( insertLink(linkmap, prevActiveLink(linkmap, newitem), newitem) );
 }
 
 STATIC MYBOOL fillLink(LLrec *linkmap)
@@ -626,16 +798,30 @@ STATIC int nextActiveLink(LLrec *linkmap, int backitemnr)
 {
   if((backitemnr < 0) || (backitemnr > linkmap->size))
     return( -1 );
-  else
+  else {
+    if(backitemnr < linkmap->lastitem)
+    while((backitemnr > linkmap->firstitem) && (linkmap->map[backitemnr] == 0))
+      backitemnr--;
     return(linkmap->map[backitemnr]);
+  }
 }
 
 STATIC int prevActiveLink(LLrec *linkmap, int forwitemnr)
 {
   if((forwitemnr <= 0) || (forwitemnr > linkmap->size+1))
     return( -1 );
-  else
-    return(linkmap->map[linkmap->size+forwitemnr]);
+  else {
+    if(forwitemnr > linkmap->lastitem)
+      return( linkmap->lastitem);
+    if(forwitemnr > linkmap->firstitem) {
+      forwitemnr += linkmap->size;
+      while((forwitemnr < linkmap->size + linkmap->lastitem) && (linkmap->map[forwitemnr] == 0))
+        forwitemnr++;
+    }
+    else
+      forwitemnr += linkmap->size;
+    return(linkmap->map[forwitemnr]);
+  }
 }
 
 STATIC int firstInactiveLink(LLrec *linkmap)
@@ -684,18 +870,25 @@ STATIC int prevInactiveLink(LLrec *linkmap, int forwitemnr)
   return( 0 );
 }
 
-STATIC MYBOOL removeLink(LLrec *linkmap, int itemnr)
+STATIC int removeLink(LLrec *linkmap, int itemnr)
 {
-  int prevnr, nextnr, size;
+  int size, prevnr, nextnr = -1;
 
   size = linkmap->size;
-
   if((itemnr <= 0) || (itemnr > size))
-    return( FALSE );
+    return( nextnr );
+#ifdef Paranoia
+  if(!isActiveLink(linkmap, itemnr))
+    return( nextnr );
+#endif
 
   /* Get link data at the specified position */
   nextnr = linkmap->map[itemnr];
   prevnr = linkmap->map[size+itemnr];
+  if(itemnr == linkmap->firstitem)
+    linkmap->firstitem = nextnr;
+  if(itemnr == linkmap->lastitem)
+    linkmap->lastitem = prevnr;
 
   /* Update forward link */
   linkmap->map[prevnr] = linkmap->map[itemnr];
@@ -711,17 +904,31 @@ STATIC MYBOOL removeLink(LLrec *linkmap, int itemnr)
   /* Decrement the count */
   linkmap->count--;
 
-  return( TRUE );
+  /* Return the next active item */
+  return( nextnr );
 }
 
-STATIC LLrec *cloneLink(LLrec *sourcemap)
+STATIC LLrec *cloneLink(LLrec *sourcemap, int newsize, MYBOOL freesource)
 {
-  LLrec *testmap;
+  LLrec *testmap = NULL;
 
-  createLink(sourcemap->size, &testmap, NULL);
-  MEMCOPY(testmap->map, sourcemap->map, 2*(sourcemap->size+1));
-  testmap->size = sourcemap->size;
-  testmap->count = sourcemap->count;
+  if((newsize == sourcemap->size) || (newsize <= 0)) {
+    createLink(sourcemap->size, &testmap, NULL);
+    MEMCOPY(testmap->map, sourcemap->map, 2*(sourcemap->size+1));
+    testmap->firstitem = sourcemap->firstitem;
+    testmap->lastitem = sourcemap->lastitem;
+    testmap->size = sourcemap->size;
+    testmap->count = sourcemap->count;
+  }
+  else {
+    int j;
+
+    createLink(newsize, &testmap, NULL);
+    for(j = firstActiveLink(sourcemap); (j != 0) && (j <= newsize); j = nextActiveLink(sourcemap, j))
+      appendLink(testmap, j);
+  }
+  if(freesource)
+    freeLink(&sourcemap);
 
   return(testmap);
 }
@@ -743,7 +950,7 @@ STATIC MYBOOL verifyLink(LLrec *linkmap, int itemnr, MYBOOL doappend)
 {
   LLrec *testmap;
 
-  testmap = cloneLink(linkmap);
+  testmap = cloneLink(linkmap, -1, FALSE);
   if(doappend) {
     appendLink(testmap, itemnr);
     removeLink(testmap, itemnr);
@@ -774,7 +981,7 @@ STATIC PVrec *createPackedVector(int size, REAL *values, int *workvector)
   workvector[k] = 1;
   ref = values[1];
   for(i = 2; i <= size; i++) {
-    if(fabs(ref - values[i]) > 1.0e-16) {
+    if(fabs(ref - values[i]) > DEF_EPSMACHINE) {
       k++;
       workvector[k] = i;
       ref = values[i];
@@ -849,5 +1056,17 @@ STATIC MYBOOL freePackedVector(PVrec **PV)
   FREE((*PV)->startpos);
   FREE(*PV);
   return( TRUE );
+}
+
+STATIC void pushPackedVector(PVrec *PV, PVrec *parent)
+{
+  PV->parent = parent;
+}
+
+STATIC PVrec *popPackedVector(PVrec *PV)
+{
+  PVrec *parent = PV->parent;
+  freePackedVector(&PV);
+  return( parent );
 }
 

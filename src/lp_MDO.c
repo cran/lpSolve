@@ -33,16 +33,22 @@ STATIC MYBOOL includeMDO(MYBOOL *usedpos, int item)
 /*  Legend:   TRUE            => A basic slack variable already in the basis
               FALSE           => A column free for being pivoted in
               AUTOMATIC+TRUE  => A row-singleton user column pivoted into the basis
-              AUTOMATIC+FALSE => A column-singleton user column pivoted into the basis
-*/
-  MYBOOL test = usedpos[item];
+              AUTOMATIC+FALSE => A column-singleton user column pivoted into the basis */
 
+  /* Handle case where we are processing all columns */
+  if(usedpos == NULL)
+    return( TRUE );
+    
+  else {
+  /* Otherwise do the selective case */
+    MYBOOL test = usedpos[item];
 #if 1
-  return( test != TRUE );
+    return( test != TRUE );
 #else
-  test = test & TRUE;
-  return( test == FALSE );
+    test = test & TRUE;
+    return( test == FALSE );
 #endif
+  }
 }
 
 STATIC int prepareMDO(lprec *lp, MYBOOL *usedpos, int *colorder, int *data, int *rowmap)
@@ -91,7 +97,7 @@ STATIC int prepareMDO(lprec *lp, MYBOOL *usedpos, int *colorder, int *data, int 
       rownr = &COL_MAT_ROWNR(i);
       value = &COL_MAT_VALUE(i);
       hold = 0;
-      if((*rownr > 0) && includeMDO(usedpos, 0) && lp->modifyOF1(lp, kk, &hold, 1.0)) {
+      if((*rownr > 0) && includeMDO(usedpos, 0) && modifyOF1(lp, kk, &hold, 1.0)) {
         if(!dotally)
           data[Bnz] = offset;
         Bnz++;
@@ -104,7 +110,7 @@ STATIC int prepareMDO(lprec *lp, MYBOOL *usedpos, int *colorder, int *data, int 
         /* See if we need to change phase 1 OF value */
         if(*rownr == 0) {
           hold = *value;
-          if(!lp->modifyOF1(lp, kk, &hold, 1.0)) 
+          if(!modifyOF1(lp, kk, &hold, 1.0)) 
             continue;
         }
         /* Tally uneliminated constraint row values */
@@ -148,7 +154,7 @@ void mdo_free(void *mem)
 }
 
 
-STATIC int getMDO(lprec *lp, MYBOOL *usedpos, int *colorder, int *size, MYBOOL symmetric)
+int __WINAPI getMDO(lprec *lp, MYBOOL *usedpos, int *colorder, int *size, MYBOOL symmetric)
 {
   int    error = FALSE;
   int    nrows = lp->rows+1, ncols = colorder[0];

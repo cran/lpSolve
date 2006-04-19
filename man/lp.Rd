@@ -31,14 +31,14 @@ non-zero value means "yes." Currently ignored.}
 non-zero value means "yes."}
 }
 \details{
-This function calls the lp\_solve 5.0 solver. That system has many options not
+This function calls the lp\_solve 5.5 solver. That system has many options not
 supported here. The current version is maintained at
 \url{ftp://ftp.es.ele.tue.nl/pub/lp_solve}
 }
 \value{
 An lp object. See \code{link{lp.object}} for details.
 }
-\author{Sam Buttrey, \email{buttrey@nps.navy.mil}}
+\author{Sam Buttrey, \email{buttrey@nps.edu}}
 \seealso{\code{\link{lp.assign}}, \code{\link{lp.transport}}}
 \examples{
 #

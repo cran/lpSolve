@@ -261,6 +261,7 @@ if ((int) *const_count > 0) {
 /*
 ** Add constraints, one at a time; then move constr_ptr up.
 */
+
     for (i = 0; i < (int) *const_count; i++)
     {
         add_constraint (lp, const_ptr,
@@ -282,7 +283,7 @@ if (*int_count > 0) {
 
 if (*compute_sens > 0) {
     if (*int_count > 0)
-        set_presolve (lp, PRESOLVE_SENSDUALS);
+        set_presolve (lp, PRESOLVE_SENSDUALS, get_presolveloops (lp));
     }
 
 *status = (LONG_OR_INT) solve (lp);
@@ -319,3 +320,157 @@ delete_lp (lp);
 return;
 
 } /* end "lpslink" */
+
+/*
+****************************** lp_transbig ************************
+**
+** This function handles "big" transportation problem. It takes in
+** the number of rows and columns, the cost matrix, and the signs and
+** right-hand sides of the constraints and builds everything else on the
+** fly. We assume that all variables are integers.
+*/
+void lp_transbig (LONG_OR_INT *direction,     /* 1 for max, 0 for min       */
+              LONG_OR_INT *r_count,           /* Number of rows             */
+              LONG_OR_INT *c_count,           /* Number of columns          */
+              double *costs,                  /* Objective function         */
+              LONG_OR_INT *r_signs,           /* Signs of row constraints   */
+              double *r_rhs,                  /* RHS of row constraints     */
+              LONG_OR_INT *c_signs,           /* Signs of col constraints   */
+              double *c_rhs,                  /* RHS of col constraints     */
+              double *obj_val,                /* Objective function value   */
+              double *solution,               /* Result of call             */
+              LONG_OR_INT *presolve,          /* Value of presolve          */
+              LONG_OR_INT *compute_sens,      /* Want sensitivity?          */
+              double *sens_coef_from,         /* Sens. coef. lower limit    */
+              double *sens_coef_to,           /* Sens. coef. upper limit    */
+              double *duals,                  /* Dual values                */
+              double *duals_from,             /* Lower limit dual values    */
+              double *duals_to,               /* Lower limit dual values    */
+              LONG_OR_INT *status)            /* Holds return value         */
+{
+long i;              /* Iteration variable       */
+long result;         /* Holds result of calls    */
+long this_element;   /* Which are we looking at? */
+lprec *lp;           /* Structure to hold the lp */
+double *row_vals;    /* Holds the values for row-type constraints */
+int *col_inds;       /* Holds locations for col-type constraints  */
+double *col_vals;    /* Holds the values for col-type constraints */
+int *row_inds;       /* Holds locations for row-type constraints  */
+
+long col_ind_ctr, row_ind_ctr;
+long rc = *r_count, cc = *c_count, num_vars = *r_count * *c_count;
+
+FILE *hithere = fopen ("GGGHiThere", "w");
+
+/*
+** Make an empty lp with r_count x c_count variables. If it fails, return.
+*/
+lp = make_lp ((int) 0, *r_count * *c_count);
+
+if (lp == (lprec *) NULL)
+    return;
+
+set_verbose (lp, 1); /* CRITICAL */
+
+set_add_rowmode (lp, TRUE);
+/*
+** "Costs" is already a vector. Set the objective function. Return on fail.
+*/
+result = set_obj_fn (lp, costs);
+if (result == 0)
+    return;
+
+/* Set the direction. The default is minimize, but set it anyway. */
+if (*direction == 1)
+    set_maxim (lp);
+else
+    set_minim (lp);
+
+/*
+** Add constraints. There are r_count row-type constraints, plus c_count
+** col_type constraints.
+*/
+row_vals = calloc (cc, sizeof (double));
+col_inds = calloc (cc, sizeof (int));
+for (i = 0L; i < rc; i++)
+{
+    for (col_ind_ctr = 0; col_ind_ctr < cc; col_ind_ctr++) {
+        row_vals[col_ind_ctr] = 0.0;
+        col_inds[col_ind_ctr] = 0;
+    }
+    for (row_ind_ctr = 0; row_ind_ctr < rc; row_ind_ctr++) {
+        for (col_ind_ctr = 0; col_ind_ctr < cc; col_ind_ctr++) {
+            this_element = (col_ind_ctr * rc) + row_ind_ctr;
+            row_vals[col_ind_ctr] = costs[this_element];
+            col_inds[col_ind_ctr] = col_ind_ctr;
+        }
+    }
+    add_constraintex (lp, cc, row_vals, col_inds, r_signs[i], r_rhs[i]);
+} /* end loop to create row constraints */
+free (row_vals);
+free (col_inds);
+
+col_vals = calloc (rc, sizeof (double));
+row_inds = calloc (rc, sizeof (int));
+for (i = 0L; i < cc; i++)
+{
+    for (row_ind_ctr = 0; row_ind_ctr < rc; row_ind_ctr++) {
+        col_vals[row_ind_ctr] = 0.0;
+        row_inds[row_ind_ctr] = 0;
+    }
+    for (col_ind_ctr = 0; col_ind_ctr < cc; col_ind_ctr++) {
+        for (row_ind_ctr = 0; row_ind_ctr < rc; row_ind_ctr++) {
+            this_element = (row_ind_ctr * cc) + col_ind_ctr;
+            col_vals[row_ind_ctr] = costs[this_element];
+            row_inds[row_ind_ctr] = row_ind_ctr;
+        }
+    }
+    add_constraintex (lp, rc, col_vals, row_inds, c_signs[i], c_rhs[i]);
+} /* end loop to create row constraints */
+free (col_vals);
+free (row_inds);
+
+set_add_rowmode (lp, FALSE);
+
+/*
+** In this problem all variables are integers. set_int starts counting at 1.
+*/
+for (i = 1; i <= num_vars; i++)
+    set_int (lp, i, TRUE);
+
+if (*compute_sens > 0) {
+    set_presolve (lp, PRESOLVE_SENSDUALS, 10);
+}
+
+fprintf (hithere, "That is so very true!\n");
+*status = (LONG_OR_INT) solve (lp);
+
+if ((int) *status != 0) {
+    return;
+}
+
+/* Now get the sensitivities, if requested. */
+if (*compute_sens > 0) {
+    get_sensitivity_obj (lp, sens_coef_from, sens_coef_to);
+    get_sensitivity_rhs (lp, duals, duals_from, duals_to);
+}
+
+/*
+** We've succeeded. Extract the objective function's value and
+** the values of the variables.
+*/
+
+*obj_val = get_objective (lp);
+
+get_variables (lp, solution);
+
+/*
+** 
+*/
+
+/*
+** Free up the memory and return.
+*/
+
+delete_lp (lp);
+}

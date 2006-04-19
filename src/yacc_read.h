@@ -11,7 +11,7 @@ void null_tmp_store(int init_Lin_term_count);
 int store_bounds(int warn);
 void storevarandweight(char *name);
 int set_sos_type(int SOStype);
-int set_sos_weight(int weight, int sos_decl);
+int set_sos_weight(double weight, int sos_decl);
 int rhs_store(REAL value, int HadConstraint, int HadVar, int Had_lineair_sum);
 int var_store(char *var, REAL value, int HadConstraint, int HadVar, int Had_lineair_sum);
 int negate_constraint(void);

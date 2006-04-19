@@ -1,5 +1,5 @@
 
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
 #include "lp_lib.h"
 #include "lp_utils.h"
@@ -200,8 +200,11 @@ STATIC int find_row(lprec *lp, char *name, MYBOOL Unconstrained_rows_found)
 {
   hashelem *hp;
 
-  hp = findhash(name, lp->rowname_hashtab);
-
+  if (lp->rowname_hashtab != NULL)
+      hp = findhash(name, lp->rowname_hashtab);
+  else
+      hp = NULL;
+ 
   if (hp == NULL) {
     if(Unconstrained_rows_found) { /* just ignore them in this case */
          return(-1);
@@ -217,8 +220,11 @@ STATIC int find_var(lprec *lp, char *name, MYBOOL verbose)
 {
   hashelem *hp;
 
-  hp = findhash(name, lp->colname_hashtab);
-
+  if (lp->colname_hashtab != NULL)
+      hp = findhash(name, lp->colname_hashtab);
+  else
+      hp = NULL;
+ 
   if (hp == NULL) {
     if(verbose)
       report(lp, SEVERE, "find_var: Unknown variable name '%s'\n", name);

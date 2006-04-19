@@ -16,8 +16,11 @@
    ----------------------------------------------------------------------------------
 */
 
+#include <string.h>
+
 #include "commonlib.h"
 #include "lp_lib.h"
+#include "lp_scale.h"
 #include "lp_utils.h"
 #include "lp_report.h"
 #include "lp_matrix.h"
@@ -32,17 +35,21 @@ MYBOOL crash_basis(lprec *lp)
 {
   int     i;
   MATrec  *mat = lp->matA;
+  MYBOOL  ok = TRUE;
 
   /* Initialize basis indicators */
-  if(!lp->basis_valid)
-    default_basis(lp);
-  else
+  if(lp->basis_valid)
     lp->var_basic[0] = FALSE;
-  for(i = 0; i <= lp->sum; i++)
-    lp->is_basic[i] = FALSE;
-  for(i = 1; i <= lp->rows; i++)
-    lp->is_basic[lp->var_basic[i]] = TRUE;
+  else
+    default_basis(lp);
 
+  /* Set initial partial pricing blocks */
+  if(lp->rowblocks != NULL)
+    lp->rowblocks->blocknow = 1;
+  if(lp->colblocks != NULL)
+    lp->colblocks->blocknow = ((lp->crashmode == CRASH_NONE) || (lp->colblocks->blockcount == 1) ? 1 : 2);
+
+  /* Construct a basis that is in some measure the "most feasible" */
   if((lp->crashmode == CRASH_MOSTFEASIBLE) && mat_validate(mat)) {
     /* The logic here follows Maros */
     LLrec   *rowLL = NULL, *colLL = NULL;
@@ -52,13 +59,16 @@ MYBOOL crash_basis(lprec *lp)
     REAL    *value;
     int     *rownr, *colnr; 
 
-    report(lp, NORMAL, "crash_basis: Basis crashing selected\n");
+    report(lp, NORMAL, "crash_basis: 'Most feasible' basis crashing selected\n");
 
     /* Tally row and column non-zero counts */
-    allocINT(lp,  &rowNZ, lp->rows+1,     TRUE);
-    allocINT(lp,  &colNZ, lp->columns+1,  TRUE);
-    allocREAL(lp, &rowMAX, lp->rows+1,    FALSE);
-    allocREAL(lp, &colMAX, lp->columns+1, FALSE);
+    ok = allocINT(lp,  &rowNZ, lp->rows+1,     TRUE) &&
+         allocINT(lp,  &colNZ, lp->columns+1,  TRUE) &&
+         allocREAL(lp, &rowMAX, lp->rows+1,    FALSE) &&
+         allocREAL(lp, &colMAX, lp->columns+1, FALSE);
+    if(!ok)
+      goto Finish;
+
     nz = mat_nonzeros(mat);
     rownr = &COL_MAT_ROWNR(0);
     colnr = &COL_MAT_COLNR(0);
@@ -76,9 +86,9 @@ MYBOOL crash_basis(lprec *lp)
         colMAX[0]  = wx;
       }
       else {
-        rowMAX[rx] = my_max(rowMAX[rx], wx);
-        colMAX[cx] = my_max(colMAX[cx], wx);
-        colMAX[0]  = my_max(colMAX[0],  wx);
+        SETMAX(rowMAX[rx], wx);
+        SETMAX(colMAX[cx], wx);
+        SETMAX(colMAX[0],  wx);
       }
     }
     /* Reduce counts for small magnitude to preserve stability */
@@ -104,8 +114,11 @@ MYBOOL crash_basis(lprec *lp)
     }
 
     /* Set up priority tables */
-    allocINT(lp, &rowWT, lp->rows+1, TRUE);
+    ok = allocINT(lp, &rowWT, lp->rows+1, TRUE);
     createLink(lp->rows,    &rowLL, NULL);
+    ok &= (rowLL != NULL);
+    if(!ok)
+      goto Finish;
     for(i = 1; i <= lp->rows; i++) {
       if(get_constr_type(lp, i)==EQ)
         ii = 3;
@@ -119,11 +132,14 @@ MYBOOL crash_basis(lprec *lp)
       if(ii > 0)
         appendLink(rowLL, i);
     }
-    allocINT(lp, &colWT, lp->columns+1, TRUE);
+    ok = allocINT(lp, &colWT, lp->columns+1, TRUE);
     createLink(lp->columns, &colLL, NULL);
+    ok &= (colLL != NULL);
+    if(!ok)
+      goto Finish;
     for(i = 1; i <= lp->columns; i++) {
       ix = lp->rows+i;
-      if(is_free(lp, i))
+      if(is_unbounded(lp, i))
         ii = 3;
       else if(lp->upbo[ix] >= lp->infinite)
         ii = 2;
@@ -171,7 +187,7 @@ MYBOOL crash_basis(lprec *lp)
           continue;
 
         /* Now do the test for best pivot */
-        tx = my_sign(get_OF_raw(lp, lp->rows+ix)) - my_sign(ROW_MAT_VALUE(ii));
+        tx = my_sign(lp->orig_obj[ix]) - my_sign(ROW_MAT_VALUE(ii));
         tx = colWT[ix] + CRASH_WEIGHT*tx - CRASH_SPACER*colNZ[ix];
         if(tx > wx) {
           cx = ix;
@@ -199,10 +215,11 @@ MYBOOL crash_basis(lprec *lp)
       }
 
       /* Set new basis variable */
-      setBasisVar(lp, rx, lp->rows+cx);
+      set_basisvar(lp, rx, lp->rows+cx);
     }
 
     /* Clean up */
+Finish:
     FREE(rowNZ);
     FREE(colNZ);
     FREE(rowMAX);
@@ -212,14 +229,117 @@ MYBOOL crash_basis(lprec *lp)
     freeLink(&rowLL);
     freeLink(&colLL);
   }
-  return( TRUE );
+
+  /* Construct a basis that is in some measure the "least degenerate" */
+  else if((lp->crashmode == CRASH_LEASTDEGENERATE) && mat_validate(mat)) {
+    /* The logic here follows Maros */
+    LLrec   *rowLL = NULL, *colLL = NULL;
+    int     ii, rx, cx, ix, nz, *merit = NULL;
+    REAL    *value, wx, hold, *rhs = NULL, *eta = NULL;
+    int     *rownr, *colnr; 
+
+    report(lp, NORMAL, "crash_basis: 'Least degenerate' basis crashing selected\n");
+
+    /* Create temporary arrays */
+    ok = allocINT(lp,  &merit, lp->columns + 1, FALSE) &&
+         allocREAL(lp, &eta, lp->rows + 1, FALSE) &&
+         allocREAL(lp, &rhs, lp->rows + 1, FALSE);
+    createLink(lp->columns, &colLL, NULL);
+    createLink(lp->rows, &rowLL, NULL);
+    ok &= (colLL != NULL) && (rowLL != NULL);
+    if(!ok)
+      goto FinishLD;
+    MEMCOPY(rhs, lp->orig_rhs, lp->rows + 1);
+    for(i = 1; i <= lp->columns; i++)
+      appendLink(colLL, i);
+    for(i = 1; i <= lp->rows; i++)
+      appendLink(rowLL, i);
+
+    /* Loop until we have found enough new bases */
+    while(colLL->count > 0) {
+
+      /* Tally non-zeros matching in RHS and each active column */
+      nz = mat_nonzeros(mat);
+      rownr = &COL_MAT_ROWNR(0);
+      colnr = &COL_MAT_COLNR(0);
+      ii = 0;
+      MEMCLEAR(merit, lp->columns + 1);
+      for(i = 0; i < nz; 
+          i++, rownr += matRowColStep, colnr += matRowColStep) {
+        rx = *rownr;
+        cx = *colnr;
+        if(isActiveLink(colLL, cx) && (rhs[rx] != 0)) {
+          merit[cx]++;
+          ii++;
+        }
+      }
+      if(ii == 0)
+        break;
+
+      /* Find maximal match; break ties with column length */
+      i = firstActiveLink(colLL);
+      cx = i;
+      for(i = nextActiveLink(colLL, i); i != 0; i = nextActiveLink(colLL, i)) {
+        if(merit[i] >= merit[cx]) {
+          if((merit[i] > merit[cx]) || (mat_collength(mat, i) > mat_collength(mat, cx)))
+            cx = i;
+        }
+      }
+
+      /* Determine the best pivot row */
+      i = mat->col_end[cx-1];
+      nz = mat->col_end[cx];
+      rownr = &COL_MAT_ROWNR(i);
+      value = &COL_MAT_VALUE(i);
+      rx = 0;
+      wx = 0;
+      MEMCLEAR(eta, lp->rows + 1);
+      for(; i < nz; 
+          i++, rownr += matRowColStep, value += matValueStep) {
+        ix = *rownr;
+        hold = *value;
+        eta[ix] = rhs[ix] / hold;
+        hold = fabs(hold);
+        if(isActiveLink(rowLL, ix) && (hold > wx)) {
+          wx = hold;
+          rx = ix;
+        }
+      }
+
+      /* Set new basis variable */
+      if(rx > 0) {
+
+        /* We have to update the rhs vector for the implied transformation
+          in order to be able to find the new RHS non-zero pattern */
+        for(i = 1; i <= lp->rows; i++)
+           rhs[i] -= wx * eta[i];
+        rhs[rx] = wx;
+
+        /* Do the exchange */
+        set_basisvar(lp, rx, lp->rows+cx);
+        removeLink(rowLL, rx);
+      }
+      removeLink(colLL, cx);
+
+    }
+
+    /* Clean up */
+FinishLD:
+    FREE(merit);
+    FREE(rhs);
+    freeLink(&rowLL);
+    freeLink(&colLL);
+
+  }
+  return( ok );
 }
 
 
 MYBOOL guess_basis(lprec *lp, REAL *guessvector, int *basisvector)
 {
   MYBOOL status = FALSE;
-  REAL   *values, *violation, *value, error, upB, loB, sortorder = 1.0;
+  REAL   *values = NULL, *violation = NULL, 
+         *value, error, upB, loB, sortorder = 1.0;
   int    i, n, *rownr, *colnr;
   MATrec *mat = lp->matA;
   
@@ -227,8 +347,9 @@ MYBOOL guess_basis(lprec *lp, REAL *guessvector, int *basisvector)
     return( status );
     
   /* Create helper arrays */
-  allocREAL(lp, &values, lp->sum+1, TRUE);
-  allocREAL(lp, &violation, lp->sum+1, TRUE);
+  if(!allocREAL(lp, &values, lp->sum+1, TRUE) ||
+     !allocREAL(lp, &violation, lp->sum+1, TRUE))
+    goto Finish;
 
   /* Compute values of slack variables for given guess vector */
   i = 0;
@@ -306,6 +427,7 @@ MYBOOL guess_basis(lprec *lp, REAL *guessvector, int *basisvector)
 
   /* Clean up and return status */
   status = (MYBOOL) (violation[1] == 0);
+Finish:
   FREE(values);
   FREE(violation);
 

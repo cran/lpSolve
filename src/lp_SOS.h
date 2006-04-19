@@ -5,6 +5,8 @@
 /* ------------------------------------------------------------------------- */
 
 #include "lp_types.h"
+#include "lp_utils.h"
+#include "lp_matrix.h"
 
 
 /* SOS constraint defines                                                    */
@@ -12,6 +14,7 @@
 #define SOS1                     1
 #define SOS2                     2
 #define SOS3                    -1
+#define SOSn                      MAXINT32
 #define SOS_START_SIZE          10  /* Start size of SOS_list array; realloced if needed */
 
 /* Define SOS_is_feasible() return values                                    */
@@ -46,6 +49,10 @@ typedef struct _SOSrec
   SOSrec    **sos_list;         /* Array of pointers to SOS lists */
   int       sos_alloc;          /* Size allocated to specially ordered sets (SOS1, SOS2...) */
   int       sos_count;          /* Number of specially ordered sets (SOS1, SOS2...) */
+  int       maxorder;           /* The highest-order SOS in the group */
+  int       sos1_count;         /* Number of the lowest order SOS in the group */
+  int       *membership;        /* Array of variable-sorted indeces to SOSes that the variable is member of */
+  int       *memberpos;         /* Starting positions of the each column's membership list */
 } /* SOSgroup */;
 
 
@@ -57,8 +64,9 @@ extern "C" {
 STATIC SOSgroup *create_SOSgroup(lprec *lp);
 STATIC void resize_SOSgroup(SOSgroup *group);
 STATIC int append_SOSgroup(SOSgroup *group, SOSrec *SOS);
-STATIC int clean_SOSgroup(SOSgroup *group);
+STATIC int clean_SOSgroup(SOSgroup *group, MYBOOL forceupdatemap);
 STATIC void free_SOSgroup(SOSgroup **group);
+
 STATIC SOSrec *create_SOSrec(SOSgroup *group, char *name, int type, int priority, int size, int *variables, REAL *weights);
 STATIC MYBOOL delete_SOSrec(SOSgroup *group, int sosindex);
 STATIC int append_SOSrec(SOSrec *SOS, int size, int *variables, REAL *weights);
@@ -66,11 +74,16 @@ STATIC void free_SOSrec(SOSrec *SOS);
 
 /* SOS utilities */
 STATIC int make_SOSchain(lprec *lp, MYBOOL forceresort);
-STATIC MYBOOL SOS_sort_members(SOSgroup *group, int sosindex);
-STATIC MYBOOL SOS_shift_col(SOSgroup *group, int sosindex, int column, int delta, MYBOOL forceresort);
+STATIC int SOS_member_updatemap(SOSgroup *group);
+STATIC MYBOOL SOS_member_sortlist(SOSgroup *group, int sosindex);
+STATIC MYBOOL SOS_shift_col(SOSgroup *group, int sosindex, int column, int delta, LLrec *usedmap, MYBOOL forceresort);
+int SOS_member_delete(SOSgroup *group, int sosindex, int member);
 int SOS_get_type(SOSgroup *group, int sosindex);
 int SOS_infeasible(SOSgroup *group, int sosindex);
 int SOS_member_index(SOSgroup *group, int sosindex, int member);
+int SOS_member_count(SOSgroup *group, int sosindex);
+int SOS_memberships(SOSgroup *group, int column);
+int *SOS_get_candidates(SOSgroup *group, int sosindex, int column, MYBOOL excludetarget, REAL *upbound, REAL *lobound);
 int SOS_is_member(SOSgroup *group, int sosindex, int column);
 MYBOOL SOS_is_member_of_type(SOSgroup *group, int column, int sostype);
 MYBOOL SOS_set_GUB(SOSgroup *group, int sosindex, MYBOOL state);
@@ -81,9 +94,10 @@ MYBOOL SOS_is_full(SOSgroup *group, int sosindex, int column, MYBOOL activeonly)
 MYBOOL SOS_can_activate(SOSgroup *group, int sosindex, int column);
 MYBOOL SOS_set_marked(SOSgroup *group, int sosindex, int column, MYBOOL asactive);
 MYBOOL SOS_unmark(SOSgroup *group, int sosindex, int column);
-int SOS_fix_unmarked(SOSgroup *group, int variable, int sosindex, REAL *bound, REAL value,
-                     MYBOOL isupper, int *diffcount);
-int SOS_fix_GUB(SOSgroup *group, int variable, int sosindex, REAL *bound, MYBOOL isleft);
+int SOS_fix_unmarked(SOSgroup *group, int sosindex, int variable, REAL *bound, REAL value,
+                     MYBOOL isupper, int *diffcount, DeltaVrec *changelog);
+int SOS_fix_list(SOSgroup *group, int sosindex, int variable, REAL *bound, 
+                  int *varlist, MYBOOL isleft, DeltaVrec *changelog);
 int SOS_is_satisfied(SOSgroup *group, int sosindex, REAL *solution);
 MYBOOL SOS_is_feasible(SOSgroup *group, int sosindex, REAL *solution);
 

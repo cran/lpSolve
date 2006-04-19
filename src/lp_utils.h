@@ -22,12 +22,15 @@ typedef struct _workarraysrec
   int       size;
   int       count;
   char      **vectorarray;
+  int       *vectorsize;
 } workarraysrec;
 
 typedef struct _LLrec
 {
   int       size;               /* The allocated list size */
   int       count;              /* The current entry count */
+  int       firstitem;
+  int       lastitem;
   int       *map;               /* The list of forward and backward-mapped entries */
 } LLrec;
 
@@ -36,6 +39,7 @@ typedef struct _PVrec
   int       count;              /* The allocated list item count */
   int       *startpos;          /* Starting index of the current value */
   REAL      *value;             /* The list of forward and backward-mapped entries */
+  struct   _PVrec *parent;     /* The parent record in a pushed chain */
 } PVrec;
 
 
@@ -54,9 +58,32 @@ REAL *cloneREAL(lprec *lp, REAL *origlist, int size);
 MYBOOL *cloneMYBOOL(lprec *lp, MYBOOL *origlist, int size);
 int *cloneINT(lprec *lp, int *origlist, int size);
 
+#if 0
+!if defined INLINE
+INLINE void set_biton(MYBOOL *bitarray, int item)
+{
+  bitarray[item / 8] |= (1 << (item % 8));
+}
+INLINE void set_bitoff(MYBOOL *bitarray, int item)
+{
+  bitarray[item / 8] &= ~(1 << (item % 8));
+}
+INLINE MYBOOL is_biton(MYBOOL *bitarray, int item)
+{
+  return( (MYBOOL) ((bitarray[item / 8] & (1 << (item % 8))) != 0) );
+}
+!else
+void set_biton(MYBOOL *bitarray, int item);
+MYBOOL set_bitoff(MYBOOL *bitarray, int item);
+MYBOOL is_biton(MYBOOL *bitarray, int item);
+!endif
+#endif
+
+int comp_bits(MYBOOL *bitarray1, MYBOOL *bitarray2, int items);
+
 STATIC workarraysrec *mempool_create(lprec *lp);
 STATIC char *mempool_obtainVector(workarraysrec *mempool, int count, int unitsize);
-STATIC MYBOOL mempool_releaseVector(workarraysrec *mempool, char *memvector);
+STATIC MYBOOL mempool_releaseVector(workarraysrec *mempool, char *memvector, MYBOOL forcefree);
 STATIC MYBOOL mempool_free(workarraysrec **mempool);
 
 STATIC void roundVector(LREAL *myvector, int endpos, LREAL roundzero);
@@ -73,6 +100,7 @@ STATIC int searchFor(int target, int *attributes, int size, int offset, MYBOOL a
 STATIC MYBOOL isINT(lprec *lp, REAL value);
 STATIC MYBOOL isOrigFixed(lprec *lp, int varno);
 STATIC void chsign_bounds(REAL *lobound, REAL *upbound);
+STATIC REAL rand_uniform(lprec *lp, REAL range);
 
 /* Doubly linked list routines */
 STATIC int createLink(int size, LLrec **linkmap, MYBOOL *usedpos);
@@ -85,6 +113,7 @@ STATIC int firstActiveLink(LLrec *linkmap);
 STATIC int lastActiveLink(LLrec *linkmap);
 STATIC MYBOOL appendLink(LLrec *linkmap, int newitem);
 STATIC MYBOOL insertLink(LLrec *linkmap, int afteritem, int newitem);
+STATIC MYBOOL setLink(LLrec *linkmap, int newitem);
 STATIC MYBOOL fillLink(LLrec *linkmap);
 STATIC int nextActiveLink(LLrec *linkmap, int backitemnr);
 STATIC int prevActiveLink(LLrec *linkmap, int forwitemnr);
@@ -92,20 +121,24 @@ STATIC int firstInactiveLink(LLrec *linkmap);
 STATIC int lastInactiveLink(LLrec *linkmap);
 STATIC int nextInactiveLink(LLrec *linkmap, int backitemnr);
 STATIC int prevInactiveLink(LLrec *linkmap, int forwitemnr);
-STATIC MYBOOL removeLink(LLrec *linkmap, int itemnr);
-STATIC LLrec *cloneLink(LLrec *sourcemap);
+STATIC int removeLink(LLrec *linkmap, int itemnr);
+STATIC LLrec *cloneLink(LLrec *sourcemap, int newsize, MYBOOL freesource);
 STATIC int compareLink(LLrec *linkmap1, LLrec *linkmap2);
 STATIC MYBOOL verifyLink(LLrec *linkmap, int itemnr, MYBOOL doappend);
 
 /* Packed vector routines */
 STATIC PVrec  *createPackedVector(int size, REAL *values, int *workvector);
+STATIC void   pushPackedVector(PVrec *PV, PVrec *parent);
 STATIC MYBOOL unpackPackedVector(PVrec *PV, REAL **target);
 STATIC REAL   getvaluePackedVector(PVrec *PV, int index);
+STATIC PVrec  *popPackedVector(PVrec *PV);
 STATIC MYBOOL freePackedVector(PVrec **PV);
 
 #ifdef __cplusplus
  }
 #endif
+
+#endif /* HEADER_lp_utils */
 
 #ifdef FORTIFY
 
@@ -127,4 +160,3 @@ extern int _Fortify_ret;
 
 #endif
 
-#endif /* HEADER_lp_utils */

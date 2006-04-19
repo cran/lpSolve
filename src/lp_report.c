@@ -10,18 +10,22 @@
     Requires:      stdarg.h, lp_lib.h
 
     Release notes:
-    v5.0.0 31 January 2004      New unit isolating B&B routines.
-    v5.1.0 01 February 2004     Complete rewrite into non-recursive version.
+    v5.0.0 3   1 January 2004      New unit isolating reporting routines.
+    v5.2.0.0   1 December 2005     Addition of Matrix Market writing function.
 
    ----------------------------------------------------------------------------------
 */
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
+
 #include "lp_lib.h"
+#include "lp_scale.h"
 #include "commonlib.h"
 #include "lp_report.h"
 
+#include "mmio.h"
 
 #ifdef FORTIFY
 # include "lp_fortify.h"
@@ -36,19 +40,19 @@
 /* ------------------------------------------------------------------------- */
 
 /* First define general utilties for reporting and output */
-char * __WINAPI explain(lprec *lp, char *format, ...)
+char * __VACALL explain(lprec *lp, char *format, ...)
 {
   char buff[DEF_STRBUFSIZE+1];
   va_list ap;
 
   va_start(ap, format);
     vsnprintf(buff, DEF_STRBUFSIZE, format, ap);
-    allocCHAR(lp, &(lp->ex_status), strlen(buff), AUTOMATIC);
+    allocCHAR(lp, &(lp->ex_status), (int) strlen(buff), AUTOMATIC);
     strcpy(lp->ex_status, buff);
   va_end(ap);
   return( lp->ex_status );
 }
-void __WINAPI report(lprec *lp, int level, char *format, ...)
+void __VACALL report(lprec *lp, int level, char *format, ...)
 {
   static char buff[DEF_STRBUFSIZE+1];
   static va_list ap;
@@ -119,7 +123,7 @@ STATIC void debug_print_solution(lprec *lp)
   if(lp->bb_trace)
     for (i = lp->rows + 1; i <= lp->sum; i++) {
       print_indent(lp);
-      report(lp, NEUTRAL, "%s " MPSVALUEMASK "\n",
+      report(lp, NEUTRAL, "%s " RESULTVALUEMASK "\n",
                  get_col_name(lp, i - lp->rows),
                 (double)lp->solution[i]);
     }
@@ -133,18 +137,18 @@ STATIC void debug_print_bounds(lprec *lp, REAL *upbo, REAL *lowbo)
     for(i = lp->rows + 1; i <= lp->sum; i++) {
       if(lowbo[i] == upbo[i]) {
         print_indent(lp);
-        report(lp, NEUTRAL, "%s = " MPSVALUEMASK "\n", get_col_name(lp, i - lp->rows),
+        report(lp, NEUTRAL, "%s = " RESULTVALUEMASK "\n", get_col_name(lp, i - lp->rows),
                              (double)lowbo[i]);
       }
       else {
         if(lowbo[i] != 0) {
           print_indent(lp);
-          report(lp, NEUTRAL, "%s > " MPSVALUEMASK "\n", get_col_name(lp, i - lp->rows),
+          report(lp, NEUTRAL, "%s > " RESULTVALUEMASK "\n", get_col_name(lp, i - lp->rows),
                                (double)lowbo[i]);
         }
         if(upbo[i] != lp->infinite) {
           print_indent(lp);
-          report(lp, NEUTRAL, "%s < " MPSVALUEMASK "\n", get_col_name(lp, i - lp->rows),
+          report(lp, NEUTRAL, "%s < " RESULTVALUEMASK "\n", get_col_name(lp, i - lp->rows),
                                (double)upbo[i]);
     }
       }
@@ -188,10 +192,23 @@ void blockWriteAMAT(FILE *output, const char *label, lprec* lp, int first, int l
   fprintf(output, label);
   fprintf(output, "\n");
 
-  if(first == 0)
-    nze = 0;
-  else
-    nze = mat->row_end[first-1];
+  if(first == 0) {
+    for(j = 1; j <= lp->columns; j++) {
+      hold = get_mat(lp, 0, j);
+      fprintf(output, " %18g", hold);
+      k++;
+      if(my_mod(k, 4) == 0) {
+        fprintf(output, "\n");
+        k = 0;
+      }
+    }
+    if(my_mod(k, 4) != 0) {
+      fprintf(output, "\n");
+      k = 0;
+    }
+    first++;
+  }
+  nze = mat->row_end[first-1];
   for(i = first; i <= last; i++) {
     nzb = nze;
     nze = mat->row_end[i];
@@ -286,7 +303,7 @@ MYBOOL REPORT_debugdump(lprec *lp, char *filename, MYBOOL livedata)
   fprintf(output, "\nGENERAL INFORMATION\n-------------------\n\n");
   fprintf(output, "Model size:     %d rows (%d equalities, %d Lagrangean), %d columns (%d integers, %d SC, %d SOS, %d GUB)\n",
                   lp->rows, lp->equalities, get_Lrows(lp), lp->columns,
-      lp->int_count, lp->sc_count, SOS_count(lp), GUB_count(lp));
+      lp->int_vars, lp->sc_vars, SOS_count(lp), GUB_count(lp));
   fprintf(output, "Data size:      %d model non-zeros, %d invB non-zeros (engine is %s)\n",
                   get_nonzeros(lp), my_if(lp->invB == NULL, 0, lp->bfp_nonzeros(lp, FALSE)), lp->bfp_name());
   fprintf(output, "Internal sizes: %d rows allocated, %d columns allocated, %d columns used, %d eta length\n",
@@ -309,8 +326,8 @@ MYBOOL REPORT_debugdump(lprec *lp, char *filename, MYBOOL livedata)
   blockWriteREAL(output, "orig_lowbo", lp->orig_lowbo, 0, lp->sum);
   blockWriteREAL(output, "orig_upbo", lp->orig_upbo, 0, lp->sum);
   blockWriteINT(output,  "row_type", lp->row_type, 0, lp->rows);
-  blockWriteBOOL(output,  "must_be_int", lp->must_be_int, 0, lp->columns, TRUE);
-  blockWriteAMAT(output,  "A", lp, 0, lp->rows);
+  blockWriteBOOL(output, "var_type", lp->var_type, 0, lp->columns, TRUE);
+  blockWriteAMAT(output, "A", lp, 0, lp->rows);
 
   if(livedata) {
     fprintf(output, "\nPROCESS DATA\n------------\n\n");
@@ -333,6 +350,8 @@ MYBOOL REPORT_debugdump(lprec *lp, char *filename, MYBOOL livedata)
 
 void REPORT_objective(lprec *lp)
 {
+  if(lp->outstream == NULL)
+    return;
   fprintf(lp->outstream, "\nValue of objective function: %g\n",
     (double)lp->best_solution[0]);
   fflush(lp->outstream);
@@ -344,6 +363,9 @@ void REPORT_solution(lprec *lp, int columns)
   REAL value;
   presolveundorec *psundo = lp->presolve_undo;
   MYBOOL NZonly = (MYBOOL) ((lp->print_sol & AUTOMATIC) > 0);
+
+  if(lp->outstream == NULL)
+    return;
 
   fprintf(lp->outstream, "\nActual values of the variables:\n");
   if(columns <= 0)
@@ -371,6 +393,9 @@ void REPORT_constraints(lprec *lp, int columns)
   REAL value;
   MYBOOL NZonly = (MYBOOL) ((lp->print_sol & AUTOMATIC) > 0);
 
+  if(lp->outstream == NULL)
+    return;
+
   if(columns <= 0)
     columns = 2;
 
@@ -396,6 +421,9 @@ void REPORT_duals(lprec *lp)
   int i;
   REAL *duals, *dualsfrom, *dualstill, *objfrom, *objtill, *objfromvalue;
   MYBOOL ret;
+
+  if(lp->outstream == NULL)
+    return;
 
   ret = get_ptr_sensitivity_objex(lp, &objfrom, &objtill, &objfromvalue, NULL);
   if(ret) {
@@ -453,7 +481,7 @@ void REPORT_extended(lprec *lp)
     report(lp, NORMAL, "  %-25s " MPSVALUEMASK MPSVALUEMASK MPSVALUEMASK MPSVALUEMASK "\n",
            get_col_name(lp,j),
            my_precision(lp->best_solution[lp->rows+j],lp->epsprimal),
-           my_precision(my_inflimit((ret) ? duals[lp->rows+j-1] : 0.0),lp->epsprimal),
+           my_precision(my_inflimit(lp, (ret) ? duals[lp->rows+j-1] : 0.0),lp->epsprimal),
            my_precision((ret) ? dualsfrom[lp->rows+j-1] : 0.0,lp->epsprimal),
            my_precision((ret) ? dualstill[lp->rows+j-1] : 0.0,lp->epsprimal));
 
@@ -478,12 +506,13 @@ void REPORT_lp(lprec *lp)
 {
   int  i, j;
 
-#ifdef Paranoia
+  if(lp->outstream == NULL)
+    return;
+
   if(lp->matA->is_roworder) {
     report(lp, IMPORTANT, "REPORT_lp: Cannot print lp while in row entry mode.\n");
     return;
   }
-#endif
 
   fprintf(lp->outstream, "Model name: %s\n", get_lp_name(lp));
   fprintf(lp->outstream, "          ");
@@ -491,7 +520,7 @@ void REPORT_lp(lprec *lp)
   for(j = 1; j <= lp->columns; j++)
     fprintf(lp->outstream, "%8s ", get_col_name(lp,j));
 
-  fprintf(lp->outstream, "\n%s  ", (is_maxim(lp) ? "Maximize" : "Minimize"));
+  fprintf(lp->outstream, "\n%simize  ", (is_maxim(lp) ? "Max" : "Min"));
   for(j = 1; j <= lp->columns; j++)
       fprintf(lp->outstream, "%8g ", get_mat(lp, 0, j));
   fprintf(lp->outstream, "\n");
@@ -499,7 +528,7 @@ void REPORT_lp(lprec *lp)
   for(i = 1; i <= lp->rows; i++) {
     fprintf(lp->outstream, "%-9s ", get_row_name(lp, i));
     for(j = 1; j <= lp->columns; j++)
-    fprintf(lp->outstream, "%8g ", get_mat(lp, i, j));
+      fprintf(lp->outstream, "%8g ", get_mat(lp, i, j));
     if(is_constr_type(lp, i, GE))
       fprintf(lp->outstream, ">= ");
     else if(is_constr_type(lp, i, LE))
@@ -551,6 +580,9 @@ void REPORT_scales(lprec *lp)
 
   colMax = lp->columns;
 
+  if(lp->outstream == NULL)
+    return;
+
   if(lp->scaling_used) {
     fprintf(lp->outstream, "\nScale factors:\n");
     for(i = 0; i <= lp->rows + colMax; i++)
@@ -564,9 +596,12 @@ void REPORT_scales(lprec *lp)
 /* Report the traditional tableau corresponding to the current basis */
 MYBOOL REPORT_tableau(lprec *lp)
 {
-  int  j, row_nr;
+  int  j, row_nr, *coltarget;
   REAL *prow = NULL;
   FILE *stream = lp->outstream;
+
+  if(lp->outstream == NULL)
+    return(FALSE);
 
   if(!lp->model_is_valid || !has_BFP(lp) ||
      (get_total_iter(lp) == 0) || (lp->spx_status == NOTRUN)) {
@@ -579,7 +614,7 @@ MYBOOL REPORT_tableau(lprec *lp)
   }
 
   fprintf(stream, "\n");
-  fprintf(stream, "Tableau at iteration %d:\n", get_total_iter(lp));
+  fprintf(stream, "Tableau at iter %.0f:\n", (double) get_total_iter(lp));
 
   for(j = 1; j <= lp->sum; j++)
     if (!lp->is_basic[j])
@@ -589,6 +624,11 @@ MYBOOL REPORT_tableau(lprec *lp)
                               (lp->is_lower[j] ? 1 : -1));
   fprintf(stream, "\n");
 
+  coltarget = (int *) mempool_obtainVector(lp->workarrays, lp->columns+1, sizeof(*coltarget));
+  if(!get_colIndexA(lp, SCAN_USERVARS+USE_NONBASICVARS, coltarget, FALSE)) {
+    mempool_releaseVector(lp->workarrays, (char *) coltarget, FALSE);
+    return(FALSE);
+  }
   for(row_nr = 1; (row_nr <= lp->rows + 1); row_nr++) {
     if (row_nr <= lp->rows)
       fprintf(stream, "%3d", (lp->var_basic[row_nr] <= lp->rows ?
@@ -598,38 +638,152 @@ MYBOOL REPORT_tableau(lprec *lp)
     else
       fprintf(stream, "   ");
     bsolve(lp, row_nr <= lp->rows ? row_nr : 0, prow, NULL, lp->epsmachine*DOUBLEROUND, 1.0);
-    prod_xA(lp, SCAN_USERVARS+USE_NONBASICVARS, prow, NULL, XRESULT_FREE, lp->epsmachine, 1.0,
-                                                prow, NULL);
+    prod_xA(lp, coltarget, prow, NULL, lp->epsmachine, 1.0,
+                                       prow, NULL, MAT_ROUNDDEFAULT);
 
     for(j = 1; j <= lp->rows + lp->columns; j++)
       if (!lp->is_basic[j])
         fprintf(stream, "%15.7f", prow[j] * (lp->is_lower[j] ? 1 : -1) *
                                             (row_nr <= lp->rows ? 1 : -1));
     fprintf(stream, "%15.7f", lp->rhs[row_nr <= lp->rows ? row_nr : 0] *
-                              (REAL) ((row_nr <= lp->rows) || (is_maxim(lp)) ? 1 : -1));
+                              (double) ((row_nr <= lp->rows) || (is_maxim(lp)) ? 1 : -1));
     fprintf(stream, "\n");
   }
+  fflush(stream);
+
+  mempool_releaseVector(lp->workarrays, (char *) coltarget, FALSE);
   FREE(prow);
   return(TRUE);
+}
+
+void REPORT_constraintinfo(lprec *lp, char *datainfo)
+{
+  int i, tally[ROWCLASS_MAX+1];
+
+  MEMCLEAR(tally, ROWCLASS_MAX+1);
+  for(i = 1; i <= lp->rows; i++)
+    tally[get_constr_class(lp, i)]++;
+
+  if(datainfo != NULL)
+    report(lp, NORMAL, "%s\n", datainfo);
+
+  for(i = 0; i <= ROWCLASS_MAX; i++)
+    if(tally[i] > 0)
+      report(lp, NORMAL, "%-15s %4d\n", get_str_constr_class(lp, i), tally[i]);
 }
 
 void REPORT_modelinfo(lprec *lp, MYBOOL doName, char *datainfo)
 {
   if(doName) {
-    report(lp, NORMAL, "Model name:  '%s' - run #%-5d\n", 
+    report(lp, NORMAL, "\nModel name:  '%s' - run #%-5d\n",
                        get_lp_name(lp), lp->solvecount);
     report(lp, NORMAL, "Objective:   %simize(%s)\n",
                        my_if(is_maxim(lp), "Max", "Min"), get_row_name(lp, 0));
+    report(lp, NORMAL, " \n");
+  }
+  if(datainfo != NULL)
+    report(lp, NORMAL, "%s\n", datainfo);
+
+  report(lp, NORMAL, "Model size:  %7d constraints, %7d variables, %12d non-zeros.\n",
+         lp->rows, lp->columns, get_nonzeros(lp));
+  if(GUB_count(lp)+SOS_count(lp) > 0)
+  report(lp, NORMAL, "Var-types:   %7d integer,     %7d semi-cont.,     %7d SOS.\n",
+         lp->int_vars, lp->sc_vars, lp->sos_vars);
+  report(lp, NORMAL, "Sets:                             %7d GUB,            %7d SOS.\n",
+                         GUB_count(lp), SOS_count(lp));
+}
+
+/* Save a matrix column subset to a MatrixMarket formatted file,
+   say to export the basis matrix for further numerical analysis.
+   If colndx is NULL, then the full constraint matrix is assumed. */
+MYBOOL REPORT_mat_mmsave(lprec *lp, char *filename, int *colndx, MYBOOL includeOF, char *infotext)
+{
+  int         n, m, nz, i, j, k, kk;
+  MATrec      *mat = lp->matA;
+  MM_typecode matcode;
+  FILE        *output = stdout;
+  MYBOOL      ok;
+  REAL        *acol = NULL;
+  int         *nzlist = NULL;
+
+  /* Open file */
+  ok = (MYBOOL) ((filename == NULL) || ((output = fopen(filename,"w")) != NULL));
+  if(!ok)
+    return(ok);
+  if((filename == NULL) && (lp->outstream != NULL))
+    output = lp->outstream;
+
+  /* Compute column and non-zero counts */
+  if(colndx == lp->var_basic) {
+    if(!lp->basis_valid)
+      return( FALSE );
+    m = lp->rows;
+  }
+  else if(colndx != NULL)
+    m = colndx[0];
+  else
+    m = lp->columns;
+  n = lp->rows;
+  nz = 0;
+
+  for(j = 1; j <= m; j++) {
+    k = (colndx == NULL ? n + j : colndx[j]);
+    if(k > n) {
+      k -= lp->rows;
+      nz += mat_collength(mat, k);
+      if(includeOF && is_OF_nz(lp, k))
+        nz++;
+    }
+    else
+      nz++;
+  }
+  kk = 0;
+  if(includeOF) {
+    n++;   /* Row count */
+    kk++;  /* Row index offset */
   }
 
-  if(datainfo != NULL)
-    report(lp, NORMAL, "\n%s", datainfo);
+  /* Initialize */
+  mm_initialize_typecode(&matcode);
+  mm_set_matrix(&matcode);
+  mm_set_coordinate(&matcode);
+  mm_set_real(&matcode);
 
-  report(lp, NORMAL, "\nModel size:  %7d constraints, %7d variables, %12d non-zeros.\n",
-         lp->rows, lp->columns, get_nonzeros(lp));
-    report(lp, NORMAL, "Constraints: %7d equality,    %7d GUB,            %7d SOS.\n",
-         lp->equalities, GUB_count(lp), SOS_count(lp));
-    report(lp, NORMAL, "Variables:   %7d integer,     %7d semi-cont.,     %7d SOS.\n",
-         lp->int_count, lp->sc_count, lp->sos_vars);
-  report(lp, NORMAL, " \n");
+  mm_write_banner(output, matcode);
+  mm_write_mtx_crd_size(output, n+kk, m, nz+(colndx == lp->var_basic ? 1 : 0));
+
+  /* Allocate working arrays for sparse column storage */
+  allocREAL(lp, &acol, n+2, FALSE);
+  allocINT(lp, &nzlist, n+2, FALSE);
+
+  /* Write the matrix non-zero values column-by-column.
+     NOTE: matrixMarket files use 1-based indeces,
+     i.e. first row of a vector has index 1, not 0. */
+  if(infotext != NULL) {
+    fprintf(output, "%%\n");
+    fprintf(output, "%% %s\n", infotext);
+    fprintf(output, "%%\n");
+  }
+  if(includeOF && (colndx == lp->var_basic))
+    fprintf(output, "%d %d %g\n", 1, 1, 1.0);
+  for(j = 1; j <= m; j++) {
+    k = (colndx == NULL ? lp->rows + j : colndx[j]);
+    if(k == 0)
+      continue;
+    nz = obtain_column(lp, k, acol, nzlist, NULL);
+    for(i = 1; i <= nz; i++) {
+      if(!includeOF && (nzlist[i] == 0))
+        continue;
+      fprintf(output, "%d %d %g\n", nzlist[i]+kk, j+kk, acol[i]);
+    }
+  }
+  fprintf(output, "%% End of MatrixMarket file\n");
+
+  /* Finish */
+  FREE(acol);
+  FREE(nzlist);
+  fclose(output);
+
+  return(ok);
 }
+

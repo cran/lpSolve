@@ -25,6 +25,9 @@
                                 compared to those in other commercial systems is
                                 the generalization to SOS'es of "unlimited" order.
     v1.1     8 December 2003    Added variable (index) deletion method.
+    v1.2    17 December 2004    Added bound change tracking functionality.
+    v1.3    18 September 2005   Added sparse SOS handling to speed up processing
+                                of large number of SOS'es.
 
    ----------------------------------------------------------------------------------
 */
@@ -61,6 +64,10 @@ STATIC int append_SOSgroup(SOSgroup *group, SOSrec *SOS)
   /* First append to the end of the list */
   group->sos_list[group->sos_count] = SOS;
   group->sos_count++;
+  i = abs(SOS->type);
+  SETMAX(group->maxorder, i);
+  if(i == 1)
+    group->sos1_count++;
   k = group->sos_count;
   SOS->tagorder = k;
 
@@ -71,7 +78,7 @@ STATIC int append_SOSgroup(SOSgroup *group, SOSrec *SOS)
       group->sos_list[i] = group->sos_list[i-1];
       group->sos_list[i-1] = SOSHold;
       if(SOSHold == SOS)
-        k = i-1;
+        k = i; /* This is the index in the [1..> range */
     }
     else
       break;
@@ -81,24 +88,32 @@ STATIC int append_SOSgroup(SOSgroup *group, SOSrec *SOS)
 }
 
 
-STATIC int clean_SOSgroup(SOSgroup *group)
+STATIC int clean_SOSgroup(SOSgroup *group, MYBOOL forceupdatemap)
 {
-  int    i, n;
+  int    i, n, k;
   SOSrec *SOS;
-  
+
   if(group == NULL)
     return( 0 );
-    
-  /* Delete any SOS without members */  
+
+  /* Delete any SOS without members or trivial member count */
   n = 0;
   if(group->sos_alloc > 0) {
+    group->maxorder = 0;
     for(i = group->sos_count; i > 0; i--) {
       SOS = group->sos_list[i-1];
-      if(SOS->members[0] == 0) {
+      k = SOS->members[0];
+      if((k == 0) ||                              /* Empty */
+         ((k == abs(SOS->type)) && (k <= 2))) {   /* Trivial */
         delete_SOSrec(group, i);
         n++;
-      }  
-    }    
+      }
+      else {
+        SETMAX(group->maxorder, abs(SOS->type));
+      }
+    }
+    if((n > 0) || forceupdatemap)
+      SOS_member_updatemap(group);
   }
   return( n );
 }
@@ -114,6 +129,8 @@ STATIC void free_SOSgroup(SOSgroup **group)
     for(i = 0; i < (*group)->sos_count; i++)
       free_SOSrec((*group)->sos_list[i]);
     FREE((*group)->sos_list);
+    FREE((*group)->membership);
+    FREE((*group)->memberpos);
   }
   FREE(*group);
 }
@@ -178,12 +195,12 @@ STATIC int append_SOSrec(SOSrec *SOS, int size, int *variables, REAL *weights)
   for(i = oldsize+1; i <= newsize; i++) {
     SOS->members[i] = variables[i-oldsize-1];
     if((SOS->members[i] < 1) || (SOS->members[i] > lp->columns))
-      report(lp, IMPORTANT, "append_SOS_rec: Invalid SOS variable definition index %d\n", SOS->members[i]);
+      report(lp, IMPORTANT, "append_SOS_rec: Invalid SOS variable definition for index %d\n", SOS->members[i]);
     else {
       if(SOS->isGUB)
-        lp->must_be_int[SOS->members[i]] |= ISGUB;
+        lp->var_type[SOS->members[i]] |= ISGUB;
       else
-        lp->must_be_int[SOS->members[i]] |= ISSOS;
+        lp->var_type[SOS->members[i]] |= ISSOS;
     }
     if(weights == NULL)
       SOS->weights[i] = i;  /* Follow standard, which is sorted ascending */
@@ -195,7 +212,7 @@ STATIC int append_SOSrec(SOSrec *SOS, int size, int *variables, REAL *weights)
  /* Sort the new paired lists ascending by weight (simple bubble sort) */
   i = sortByREAL(SOS->members, SOS->weights, newsize, 1, TRUE);
   if(i > 0)
-    report(lp, CRITICAL, "Invalid SOS variable weight at index %d\n", i);
+    report(lp, DETAILED, "append_SOS_rec: Non-unique SOS variable weight for index %d\n", i);
 
  /* Define mapping arrays to search large SOS's faster */
   allocINT(lp, &SOS->membersSorted, newsize, AUTOMATIC);
@@ -213,18 +230,18 @@ STATIC int append_SOSrec(SOSrec *SOS, int size, int *variables, REAL *weights)
 
 }
 
-
 STATIC int make_SOSchain(lprec *lp, MYBOOL forceresort)
 {
   int      i, j, k, n;
+  MYBOOL   *hold = NULL;
   REAL     *order, sum, weight;
   SOSgroup *group = lp->SOS;
 
-  /* Resort individual SOS member lists, if specified */
+  /* PART A: Resort individual SOS member lists, if specified */
   if(forceresort)
-    SOS_sort_members(group, 0);
+    SOS_member_sortlist(group, 0);
 
-  /* Tally SOS variables and create master SOS variable list */
+  /* PART B: Tally SOS variables and create master SOS variable list */
   n = 0;
   for(i = 0; i < group->sos_count; i++)
     n += group->sos_list[i]->size;
@@ -234,7 +251,7 @@ STATIC int make_SOSchain(lprec *lp, MYBOOL forceresort)
   allocINT(lp, &lp->sos_priority, n, FALSE);
   allocREAL(lp, &order, n, FALSE);
 
-  /* Move variable data to the master SOS list and sort */
+  /* Move variable data to the master SOS list and sort by ascending weight */
   n = 0;
   sum = 0;
   for(i = 0; i < group->sos_count; i++) {
@@ -246,29 +263,30 @@ STATIC int make_SOSchain(lprec *lp, MYBOOL forceresort)
       n++;
     }
   }
-  i = sortByREAL(lp->sos_priority, order, n, 0, FALSE);
+  hpsortex(order, n, 0, sizeof(*order), FALSE, compareREAL, lp->sos_priority);
+  FREE(order);
 
   /* Remove duplicate SOS variables */
+  allocMYBOOL(lp, &hold, lp->columns+1, TRUE);
+  k = 0;
   for(i = 0; i < n; i++) {
-    /* Scan forward to look for duplicate variables */
-    for(j = i+1; j < n; j++) {
-      if(lp->sos_priority[i] == lp->sos_priority[j]) {
-        /* Duplicate found, shrink the tail end of the list */
-        for(k = j+1; k < n; k++)
-          lp->sos_priority[k-1] = lp->sos_priority[k];
-        n--;
-      }
+    j = lp->sos_priority[i];
+    if(!hold[j]) {
+      hold[j] = TRUE;
+      if(k < i)
+        lp->sos_priority[k] = j;
+      k++;
     }
   }
+  FREE(hold);
 
   /* Adjust the size of the master variable list, if necessary */
-  if(n < lp->sos_vars) {
-    allocINT(lp, &lp->sos_priority, n, AUTOMATIC);
-    lp->sos_vars = n;
+  if(k < lp->sos_vars) {
+    allocINT(lp, &lp->sos_priority, k, AUTOMATIC);
+    lp->sos_vars = k;
   }
 
-  free(order);
-  return(n);
+  return( k );
 
 }
 
@@ -283,12 +301,21 @@ STATIC MYBOOL delete_SOSrec(SOSgroup *group, int sosindex)
 #endif
 
   /* Delete and free the SOS record */
+  if(abs(SOS_get_type(group, sosindex)) == 1)
+    group->sos1_count--;
   free_SOSrec(group->sos_list[sosindex-1]);
   while(sosindex < group->sos_count) {
     group->sos_list[sosindex-1] = group->sos_list[sosindex];
     sosindex++;
   }
   group->sos_count--;
+
+  /* Update maxorder */
+  group->maxorder = 0;
+  for(sosindex = 0; sosindex < group->sos_count; sosindex++) {
+    SETMAX(group->maxorder, abs(group->sos_list[sosindex]->type));
+  }
+
   return(TRUE);
 }
 
@@ -296,18 +323,18 @@ STATIC MYBOOL delete_SOSrec(SOSgroup *group, int sosindex)
 STATIC void free_SOSrec(SOSrec *SOS)
 {
   if(SOS->name != NULL)
-    free(SOS->name);
+    FREE(SOS->name);
   if(SOS->size > 0) {
-    free(SOS->members);
-    free(SOS->weights);
-    free(SOS->membersSorted);
-    free(SOS->membersMapped);
+    FREE(SOS->members);
+    FREE(SOS->weights);
+    FREE(SOS->membersSorted);
+    FREE(SOS->membersMapped);
   }
-  free(SOS);
+  FREE(SOS);
 }
 
 
-STATIC MYBOOL SOS_sort_members(SOSgroup *group, int sosindex)
+STATIC MYBOOL SOS_member_sortlist(SOSgroup *group, int sosindex)
 /* Routine to (re-)sort SOS member arrays for faster access to large SOSes */
 {
   int    i, n;
@@ -317,7 +344,7 @@ STATIC MYBOOL SOS_sort_members(SOSgroup *group, int sosindex)
 
 #ifdef Paranoia
   if((sosindex < 0) || (sosindex > group->sos_count)) {
-    report(lp, IMPORTANT, "SOS_sort_members: Invalid SOS index %d\n", sosindex);
+    report(lp, IMPORTANT, "SOS_member_sortlist: Invalid SOS index %d\n", sosindex);
     return(FALSE);
   }
 #endif
@@ -327,7 +354,7 @@ STATIC MYBOOL SOS_sort_members(SOSgroup *group, int sosindex)
 
   if(sosindex == 0) {
     for(i = 1; i <= group->sos_count; i++) {
-      if(!SOS_sort_members(group, i))
+      if(!SOS_member_sortlist(group, i))
         return(FALSE);
     }
   }
@@ -351,8 +378,68 @@ STATIC MYBOOL SOS_sort_members(SOSgroup *group, int sosindex)
   return( TRUE );
 }
 
+STATIC int SOS_member_updatemap(SOSgroup *group)
+{
+  int      i, j, k, n, nvars = 0,
+           *list, *tally = NULL;
+  SOSrec   *rec;
+  lprec    *lp = group->lp;
 
-STATIC MYBOOL SOS_shift_col(SOSgroup *group, int sosindex, int column, int delta, MYBOOL forceresort)
+  /* (Re)-initialize usage arrays */
+  allocINT(lp, &group->memberpos, lp->columns+1, AUTOMATIC);
+  allocINT(lp, &tally, lp->columns+1, TRUE);
+
+  /* Get each variable's SOS membership count */
+  for(i = 0; i < group->sos_count; i++) {
+    rec = group->sos_list[i];
+    n = rec->size;
+    list = rec->members;
+    for(j = 1; j <= n; j++) {
+      k = list[j];
+#ifdef Paranoia
+      if((k < 1) || (k > lp->columns))
+        report(lp, SEVERE, "SOS_member_updatemap: Member %j of SOS number %d is out of column range (%d)\n",
+                            j, i+1, k);
+#endif
+      tally[k]++;
+    }
+
+  }
+
+  /* Compute pointer into column-sorted array */
+  group->memberpos[0] = 0;
+  for(i = 1; i <= lp->columns; i++) {
+    n = tally[i];
+    if(n > 0)
+      nvars++;
+    group->memberpos[i] = group->memberpos[i-1] + n;
+  }
+  n = group->memberpos[lp->columns];
+  MEMCOPY(tally+1, group->memberpos, lp->columns);
+
+  /* Load the column-sorted SOS indeces / pointers */
+  allocINT(lp, &group->membership, n+1, AUTOMATIC);
+  for(i = 0; i < group->sos_count; i++) {
+    rec = group->sos_list[i];
+    n = rec->size;
+    list = rec->members;
+    for(j = 1; j <= n; j++) {
+      k = tally[list[j]]++;
+#ifdef Paranoia
+      if(k > group->memberpos[lp->columns])
+        report(lp, SEVERE, "SOS_member_updatemap: Member mapping for variable %j of SOS number %d is invalid\n",
+                            list[j], i+1);
+#endif
+      group->membership[k] = i+1;
+    }
+  }
+  FREE(tally);
+
+  return( nvars );
+}
+
+
+STATIC MYBOOL SOS_shift_col(SOSgroup *group, int sosindex, int column, int delta, LLrec *usedmap, MYBOOL forceresort)
 /* Routine to adjust SOS indeces for variable insertions or deletions;
    Note: SOS_shift_col must be called before make_SOSchain! */
 {
@@ -380,7 +467,7 @@ STATIC MYBOOL SOS_shift_col(SOSgroup *group, int sosindex, int column, int delta
 
   if(sosindex == 0) {
     for(i = 1; i <= group->sos_count; i++) {
-      if(!SOS_shift_col(group, i, column, delta, forceresort))
+      if(!SOS_shift_col(group, i, column, delta, usedmap, forceresort))
         return(FALSE);
     }
   }
@@ -400,20 +487,45 @@ STATIC MYBOOL SOS_shift_col(SOSgroup *group, int sosindex, int column, int delta
     /* Case where variables are to be deleted/indeces decremented */
     else {
       changed = 0;
-      for(i = 1, ii = 0; i <= n; i++) {
-        nr = list[i];
-        /* Check if this SOS variable should be deleted */
-        if((nr >= column) && (nr < column-delta))
-          continue;
-        /* If the index is "high" then decrement */
-        if(nr > column) {
-          changed++;
-          nr += delta;
+      if(usedmap != NULL) {
+        int *newidx = NULL;
+        /* Defer creation of index mapper until we are sure that a
+           member of this SOS is actually targeted for deletion */
+        if(newidx == NULL) {
+          allocINT(group->lp, &newidx, group->lp->columns+1, TRUE);
+          for(i = firstActiveLink(usedmap), ii = 1; i != 0;
+              i = nextActiveLink(usedmap, i), ii++)
+            newidx[i] = ii;
         }
-        ii++;
-        list[ii] = nr;
-        weights[ii] = weights[i];
+        for(i = 1, ii = 0; i <= n; i++) {
+          nr = list[i];
+          /* Check if this SOS variable should be deleted */
+          if(!isActiveLink(usedmap, nr))
+            continue;
+
+          /* If the index is "high" then make adjustment and shift */
+          changed++;
+          ii++;
+          list[ii] = newidx[nr];
+          weights[ii] = weights[i];
+        }
+        FREE(newidx);
       }
+      else
+        for(i = 1, ii = 0; i <= n; i++) {
+          nr = list[i];
+          /* Check if this SOS variable should be deleted */
+          if((nr >= column) && (nr < column-delta))
+            continue;
+          /* If the index is "high" then decrement */
+          if(nr > column) {
+            changed++;
+            nr += delta;
+          }
+          ii++;
+          list[ii] = nr;
+          weights[ii] = weights[i];
+        }
       /* Update the SOS length / type indicators */
       if(ii < n) {
         list[0] = ii;
@@ -422,7 +534,7 @@ STATIC MYBOOL SOS_shift_col(SOSgroup *group, int sosindex, int column, int delta
 
      /* Update mapping arrays to search large SOS's faster */
       if(forceresort && ((ii < n) || (changed > 0)))
-        SOS_sort_members(group, sosindex);
+        SOS_member_sortlist(group, sosindex);
     }
 
   }
@@ -430,6 +542,87 @@ STATIC MYBOOL SOS_shift_col(SOSgroup *group, int sosindex, int column, int delta
 
 }
 
+int SOS_member_count(SOSgroup *group, int sosindex)
+{
+  SOSrec *SOS;
+
+#ifdef Paranoia
+  if((sosindex < 0) || (sosindex > group->sos_count)) {
+    report(group->lp, IMPORTANT, "SOS_member_count: Invalid SOS index %d\n", sosindex);
+    return( -1 );
+  }
+#endif
+  SOS = group->sos_list[sosindex-1];
+  return( SOS->members[0] );
+}
+
+int SOS_member_delete(SOSgroup *group, int sosindex, int member)
+{
+  int   *list, i, i2, k, n, nn = 0;
+  SOSrec *SOS;
+  lprec  *lp = group->lp;
+
+#ifdef Paranoia
+  if((sosindex < 0) || (sosindex > group->sos_count)) {
+    report(group->lp, IMPORTANT, "SOS_member_delete: Invalid SOS index %d\n", sosindex);
+    return( -1 );
+  }
+#endif
+
+  if(sosindex == 0) {
+    for(i = group->memberpos[member-1]; i < group->memberpos[member]; i++) {
+      k = group->membership[i];
+      n = SOS_member_delete(group, k, member);
+      if(n >= 0)
+        nn += n;
+      else
+        return( n );
+    }
+    /* We must update the mapper */
+    k = group->memberpos[member];
+    i = group->memberpos[member-1];
+    n = group->memberpos[lp->columns] - k;
+    if(n > 0)
+      MEMCOPY(group->membership + i, group->membership + k, n);
+    for(i = member; i <= lp->columns; i++)
+      group->memberpos[i] = group->memberpos[i-1];
+  }
+  else {
+    SOS = group->sos_list[sosindex-1];
+    list = SOS->members;
+    n = list[0];
+
+    /* Find the offset of the member */
+    i = 1;
+    while((i <= n) && (abs(list[i]) != member))
+      i++;
+    if(i > n)
+      return( -1 );
+    nn++;
+
+    /* Shift remaining members *and* the active count one position left */
+    while(i <= n) {
+      list[i] = list[i+1];
+      i++;
+    }
+    list[0]--;
+    SOS->size--;
+
+    /* Do the same with the active list one position left */
+    i = n + 1;
+    i2 = i + list[n];
+    k = i + 1;
+    while(i < i2) {
+      if(abs(list[k]) == member)
+        k++;
+      list[i] = list[k];
+      i++;
+      k++;
+    }
+  }
+
+  return( nn );
+}
 
 int SOS_get_type(SOSgroup *group, int sosindex)
 {
@@ -446,8 +639,7 @@ int SOS_get_type(SOSgroup *group, int sosindex)
 
 int SOS_infeasible(SOSgroup *group, int sosindex)
 {
-  int    i, n, nn, failindex;
-  int    *list;
+  int    i, n, nn, varnr, failindex, *list;
   lprec  *lp = group->lp;
 
 #ifdef Paranoia
@@ -473,14 +665,18 @@ int SOS_infeasible(SOSgroup *group, int sosindex)
     nn = list[n+1];
    /* Find index of next lower-bounded variable */
     for(i = 1; i <= n; i++) {
-      if(lp->orig_lowbo[lp->rows + abs(list[i])] > 0)
+      varnr = abs(list[i]);
+      if((lp->orig_lowbo[lp->rows + varnr] > 0) &&
+         !((lp->sc_vars > 0) && is_semicont(lp, varnr)))
         break;
     }
 
    /* Find if there is another lower-bounded variable beyond the type window */
     i = i+nn;
     while(i <= n) {
-      if(lp->orig_lowbo[lp->rows + abs(list[i])] > 0)
+      varnr = abs(list[i]);
+      if((lp->orig_lowbo[lp->rows + varnr] > 0) &&
+         !((lp->sc_vars > 0) && is_semicont(lp, varnr)))
         break;
       i++;
     }
@@ -507,6 +703,34 @@ int SOS_member_index(SOSgroup *group, int sosindex, int member)
 }
 
 
+int SOS_memberships(SOSgroup *group, int varnr)
+{
+  int   i, n = 0;
+  lprec *lp;
+
+  /* Check if there is anything to do */
+  if((group == NULL) || (SOS_count(lp = group->lp) == 0))
+    return( n );
+
+#ifdef Paranoia
+  if((varnr < 0) || (varnr > lp->columns)) {
+    report(lp, IMPORTANT, "SOS_memberships: Invalid variable index %d given\n", varnr);
+    return( n );
+  }
+#endif
+
+  if(varnr == 0) {
+    for(i = 1; i <= lp->columns; i++)
+      if(group->memberpos[i] > group->memberpos[i-1])
+        n++;
+  }
+  else
+    n = group->memberpos[varnr] - group->memberpos[varnr-1];
+
+  return( n );
+}
+
+
 int SOS_is_member(SOSgroup *group, int sosindex, int column)
 {
   int    i, n = FALSE, *list;
@@ -523,19 +747,11 @@ int SOS_is_member(SOSgroup *group, int sosindex, int column)
   }
 #endif
 
-  if((sosindex == 0) && (group->sos_count == 1))
-    sosindex = 1;
-
   if(sosindex == 0) {
-    if(lp->must_be_int[column] & (ISSOS | ISGUB)) {
-      for(i = 1; i <= group->sos_count; i++) {
-        n = SOS_is_member(group, i, column);
-        if(n)
-          break;
-      }
-    }
+    if(lp->var_type[column] & (ISSOS | ISGUB))
+      n = (MYBOOL) (SOS_memberships(group, column) > 0);
   }
-  else if(lp->must_be_int[column] & (ISSOS | ISGUB)) {
+  else if(lp->var_type[column] & (ISSOS | ISGUB)) {
 
    /* Search for the variable */
     i = SOS_member_index(group, sosindex, column);
@@ -555,10 +771,14 @@ int SOS_is_member(SOSgroup *group, int sosindex, int column)
 
 MYBOOL SOS_is_member_of_type(SOSgroup *group, int column, int sostype)
 {
-  int i;
+  int i, k, n;
 
-  for(i = 1; i <= group->sos_count; i++) {
-  if((SOS_get_type(group, i) == sostype) && SOS_is_member(group, i, column))
+  if(group != NULL)
+  for(i = group->memberpos[column-1]; i < group->memberpos[column]; i++) {
+    k = group->membership[i];
+    n = SOS_get_type(group, k);
+    if(((n == sostype) ||
+        ((sostype == SOSn) && (n > 2))) && SOS_is_member(group, k, column))
       return(TRUE);
   }
   return(FALSE);
@@ -616,7 +836,7 @@ MYBOOL SOS_is_GUB(SOSgroup *group, int sosindex)
 
 MYBOOL SOS_is_marked(SOSgroup *group, int sosindex, int column)
 {
-  int    i, n, *list;
+  int    i, k, n, *list;
   lprec  *lp;
 
   if(group == NULL)
@@ -630,15 +850,13 @@ MYBOOL SOS_is_marked(SOSgroup *group, int sosindex, int column)
   }
 #endif
 
-  if(!(lp->must_be_int[column] & (ISSOS | ISGUB)))
+  if(!(lp->var_type[column] & (ISSOS | ISGUB)))
     return(FALSE);
 
-  if((sosindex == 0) && (group->sos_count == 1))
-    sosindex = 1;
-
   if(sosindex == 0) {
-    for(i = 1; i <= group->sos_count; i++) {
-      n = SOS_is_marked(group, i, column);
+    for(i = group->memberpos[column-1]; i < group->memberpos[column]; i++) {
+      k = group->membership[i];
+      n = SOS_is_marked(group, k, column);
       if(n)
         return(TRUE);
     }
@@ -669,15 +887,13 @@ MYBOOL SOS_is_active(SOSgroup *group, int sosindex, int column)
   }
 #endif
 
-  if(!(lp->must_be_int[column] & (ISSOS | ISGUB)))
+  if(!(lp->var_type[column] & (ISSOS | ISGUB)))
     return(FALSE);
 
-  if((sosindex == 0) && (group->sos_count == 1))
-    sosindex = 1;
-
   if(sosindex == 0) {
-    for(i = 1; i <= group->sos_count; i++) {
-      n = SOS_is_active(group, i, column);
+    for(i = group->memberpos[column-1]; i < group->memberpos[column]; i++) {
+      nn = group->membership[i];
+      n = SOS_is_active(group, nn, column);
       if(n)
         return(TRUE);
     }
@@ -688,9 +904,10 @@ MYBOOL SOS_is_active(SOSgroup *group, int sosindex, int column)
     n = list[0]+1;
     nn = list[n];
 
-   /* Scan the active (non-zero) SOS index list */
-  for(i = 1; (i <= nn) && (list[n+i] != 0); i++)
-      if(list[n+i] == column) return(TRUE);
+    /* Scan the active (non-zero) SOS index list */
+    for(i = 1; (i <= nn) && (list[n+i] != 0); i++)
+      if(list[n+i] == column)
+        return(TRUE);
   }
   return(FALSE);
 }
@@ -708,15 +925,13 @@ MYBOOL SOS_is_full(SOSgroup *group, int sosindex, int column, MYBOOL activeonly)
   }
 #endif
 
-  if(!(lp->must_be_int[column] & (ISSOS | ISGUB)))
+  if(!(lp->var_type[column] & (ISSOS | ISGUB)))
     return(FALSE);
 
-  if((sosindex == 0) && (group->sos_count == 1))
-    sosindex = 1;
-
   if(sosindex == 0) {
-    for(i = 1; i <= group->sos_count; i++) {
-      if(SOS_is_full(group, i, column, activeonly))
+    for(i = group->memberpos[column-1]; i < group->memberpos[column]; i++) {
+      nn = group->membership[i];
+      if(SOS_is_full(group, nn, column, activeonly))
         return(TRUE);
     }
   }
@@ -764,16 +979,14 @@ MYBOOL SOS_can_activate(SOSgroup *group, int sosindex, int column)
   }
 #endif
 
-  if(!(lp->must_be_int[column] & (ISSOS | ISGUB)))
+  if(!(lp->var_type[column] & (ISSOS | ISGUB)))
     return(FALSE);
 
-  if((sosindex == 0) && (group->sos_count == 1))
-    sosindex = 1;
-
   if(sosindex == 0) {
-    for(i = 1; i <= group->sos_count; i++) {
-      nn = SOS_can_activate(group, i, column);
-      if(nn == FALSE)
+    for(i = group->memberpos[column-1]; i < group->memberpos[column]; i++) {
+      nn = group->membership[i];
+      n = SOS_can_activate(group, nn, column);
+      if(n == FALSE)
         return(FALSE);
     }
   }
@@ -845,24 +1058,24 @@ MYBOOL SOS_set_marked(SOSgroup *group, int sosindex, int column, MYBOOL asactive
   }
 #endif
 
-  if(!(lp->must_be_int[column] & (ISSOS | ISGUB)))
+  if(!(lp->var_type[column] & (ISSOS | ISGUB)))
     return(FALSE);
 
-  if((sosindex == 0) && (group->sos_count == 1))
-    sosindex = 1;
-
- /* Define an IBM-"SOS3" member variable temporarily as integer, if it is
-    not already a permanent integer; is reset in SOS_unmark */
-  if(asactive && !is_int(lp, column) && SOS_is_member_of_type(group, column, SOS3)) {
-    lp->must_be_int[column] |= ISSOSTEMPINT;
-    set_int(lp, column, TRUE);
-  }
-
   if(sosindex == 0) {
+
+   /* Define an IBM-"SOS3" member variable temporarily as integer, if it is
+      not already a permanent integer; is reset in SOS_unmark */
+    if(asactive && !is_int(lp, column) && SOS_is_member_of_type(group, column, SOS3)) {
+      lp->var_type[column] |= ISSOSTEMPINT;
+      set_int(lp, column, TRUE);
+    }
+
     nn = 0;
-    for(i = 1; i <= group->sos_count; i++)
-      if(SOS_set_marked(group, i, column, asactive))
+    for(i = group->memberpos[column-1]; i < group->memberpos[column]; i++) {
+      n = group->membership[i];
+      if(SOS_set_marked(group, n, column, asactive))
         nn++;
+    }
     return((MYBOOL) (nn == group->sos_count));
   }
   else {
@@ -908,23 +1121,24 @@ MYBOOL SOS_unmark(SOSgroup *group, int sosindex, int column)
   }
 #endif
 
-  if(!(lp->must_be_int[column] & (ISSOS | ISGUB)))
+  if(!(lp->var_type[column] & (ISSOS | ISGUB)))
     return(FALSE);
 
-  if((sosindex == 0) && (group->sos_count == 1))
-    sosindex = 1;
-
- /* Undefine a SOS3 member variable that has temporarily been set as integer */
-  if(lp->must_be_int[column] & ISSOSTEMPINT) {
-    lp->must_be_int[column] &= !ISSOSTEMPINT;
-  set_int(lp, column, FALSE);
-  }
 
   if(sosindex == 0) {
+
+    /* Undefine a SOS3 member variable that has temporarily been set as integer */
+    if(lp->var_type[column] & ISSOSTEMPINT) {
+      lp->var_type[column] &= !ISSOSTEMPINT;
+      set_int(lp, column, FALSE);
+    }
+
     nn = 0;
-    for(i = 1; i <= group->sos_count; i++)
-      if(SOS_unmark(group, i, column))
+    for(i = group->memberpos[column-1]; i < group->memberpos[column]; i++) {
+      n = group->membership[i];
+      if(SOS_unmark(group, n, column))
         nn++;
+    }
     return((MYBOOL) (nn == group->sos_count));
   }
   else {
@@ -962,7 +1176,8 @@ MYBOOL SOS_unmark(SOSgroup *group, int sosindex, int column)
 }
 
 
-int SOS_fix_unmarked(SOSgroup *group, int variable, int sosindex, REAL *bound, REAL value, MYBOOL isupper, int *diffcount)
+int SOS_fix_unmarked(SOSgroup *group, int sosindex, int variable, REAL *bound, REAL value, MYBOOL isupper,
+                     int *diffcount, DeltaVrec *changelog)
 {
   int    i, ii, count, n, nn, nLeft, nRight, *list;
   lprec  *lp = group->lp;
@@ -974,14 +1189,11 @@ int SOS_fix_unmarked(SOSgroup *group, int variable, int sosindex, REAL *bound, R
   }
 #endif
 
-  if((sosindex == 0) && (group->sos_count == 1))
-    sosindex = 1;
-
   count = 0;
   if(sosindex == 0) {
-    for(i = 1; i <= group->sos_count; i++) {
-      if(SOS_is_member(group, i, variable))
-        count += SOS_fix_unmarked(group, variable, i, bound, value, isupper, diffcount);
+    for(i = group->memberpos[variable-1]; i < group->memberpos[variable]; i++) {
+      n = group->membership[i];
+      count += SOS_fix_unmarked(group, n, variable, bound, value, isupper, diffcount, changelog);
     }
   }
   else {
@@ -1029,7 +1241,11 @@ int SOS_fix_unmarked(SOSgroup *group, int variable, int sosindex, REAL *bound, R
             return(-ii);
          /* OK, set the new bound */
           count++;
-          bound[ii] = value;
+          if(changelog == NULL)
+            bound[ii] = value;
+          else
+            modifyUndoLadder(changelog, ii, bound, value);
+
         }
         if((diffcount != NULL) && (lp->solution[ii] != value))
           (*diffcount)++;
@@ -1039,74 +1255,132 @@ int SOS_fix_unmarked(SOSgroup *group, int variable, int sosindex, REAL *bound, R
   return(count);
 }
 
-
-int SOS_fix_GUB(SOSgroup *group, int variable, int sosindex, REAL *bound, MYBOOL isleft)
+int *SOS_get_candidates(SOSgroup *group, int sosindex, int column, MYBOOL excludetarget,
+                        REAL *upbound, REAL *lobound)
 {
-  int    i, ii, count, n, nn, nLeft, *list;
+  int    i, ii, j, n, nn = 0, *list, *candidates = NULL;
+  lprec  *lp = group->lp;
+
+  if(group == NULL)
+    return( candidates );
+
+#ifdef Paranoia
+  if(sosindex > group->sos_count) {
+    report(lp, IMPORTANT, "SOS_get_candidates: Invalid index %d\n", sosindex);
+    return( candidates );
+  }
+#endif
+
+  /* Determine SOS target(s); note that if "sosindex" is negative, only
+     the first non-empty SOS where "column" is a member is processed */
+  if(sosindex <= 0) {
+    i = 0;
+    ii = group->sos_count;
+  }
+  else {
+    i = sosindex - 1;
+    ii = sosindex;
+  }
+
+  /* Tally candidate usage */
+  allocINT(lp, &candidates, lp->columns+1, TRUE);
+  for(; i < ii; i++) {
+    if(!SOS_is_member(group, i+1, column))
+      continue;
+    list = group->sos_list[i]->members;
+    n = list[0];
+    while(n > 0) {
+      j = list[n];
+      if((j > 0) && (upbound[lp->rows+j] > 0)) {
+        if(lobound[lp->rows+j] > 0) {
+          report(lp, IMPORTANT, "SOS_get_candidates: Invalid non-zero lower bound setting\n");
+          n = 0;
+          goto Finish;
+        }
+        if(candidates[j] == 0)
+          nn++;
+        candidates[j]++;
+      }
+      n--;
+    }
+    if((sosindex < 0) && (nn > 1))
+      break;
+  }
+
+  /* Condense the list into indeces */
+  n = 0;
+  for(i = 1; i <= lp->columns; i++) {
+    if((candidates[i] > 0) && (!excludetarget || (i != column))) {
+      n++;
+      candidates[n] = i;
+    }
+  }
+
+  /* Finalize */
+Finish:
+  candidates[0] = n;
+  if(n == 0)
+    FREE(candidates);
+
+  return( candidates);
+
+}
+
+int SOS_fix_list(SOSgroup *group, int sosindex, int variable, REAL *bound,
+                 int *varlist, MYBOOL isleft, DeltaVrec *changelog)
+{
+  int    i, ii, jj, count = 0;
   REAL   value = 0;
   lprec  *lp = group->lp;
 
 #ifdef Paranoia
   if((sosindex < 0) || (sosindex > group->sos_count)) {
-    report(lp, IMPORTANT, "SOS_fix_GUB: Invalid SOS index %d\n", sosindex);
+    report(lp, IMPORTANT, "SOS_fix_list: Invalid index %d\n", sosindex);
     return(FALSE);
   }
 #endif
 
-  if((sosindex == 0) && (group->sos_count == 1))
-    sosindex = 1;
-
-  count = 0;
   if(sosindex == 0) {
-    for(i = 1; i <= group->sos_count; i++) {
-      if(SOS_is_member(group, i, variable))
-        count += SOS_fix_GUB(group, variable, i, bound, isleft);
+    for(i = group->memberpos[variable-1]; i < group->memberpos[variable]; i++) {
+      ii = group->membership[i];
+      count += SOS_fix_list(group, ii, variable, bound, varlist, isleft, changelog);
     }
   }
   else {
-    list = group->sos_list[sosindex-1]->members;
-    n = list[0];
 
-   /* Count the number of unmarked SOS variables */
-    nn = 0;
-    for(i = 1; i <= n; i++) {
-      ii = list[i];
-      if((ii > 0) && (bound[lp->rows+ii] > value))
-        nn++;
+    /* Establish the number of unmarked variables in the left window
+       (note that "variable" should have been marked previously) */
+    ii = varlist[0] / 2;
+    if(isleft) {
+      i = 1;
+      if(isleft == AUTOMATIC)
+        ii = varlist[0];
     }
-    if(nn == 0)
-      return(count);
+    else {
+      i = ii + 1;
+      ii = varlist[0];
+    }
 
-   /* Establish the number of unmarked variables in the left window
-      (note that "variable" should have been marked previously) */
-    nLeft = nn / 2;
+    /* Loop over members to fix values at the new bound (zero) */
+    while(i <= ii) {
+      if(SOS_is_member(group, sosindex, varlist[i])) {
+        jj = lp->rows + varlist[i];
 
-   /* Fix variables in the specified variable window */
-    nn = 0;
-    for(i = 1; (i <= n); i++)  {
-
-     /* Find next unmarked variable */
-      ii = list[i];
-      if((ii < 0) || (bound[lp->rows+ii] == value))
-        continue;
-      nn++;
-
-     /* Check if we are in the appropriate window */
-      if((isleft && (nn <= nLeft)) ||
-         (!isleft && (nn > nLeft))) {
-
-        /* Proceed to set 0-bound */
-        ii += lp->rows;
         /* Verify that we don't violate original bounds */
-        if(value < lp->orig_lowbo[ii])
-          return(-ii);
-       /* OK, set the new bound */
+        if(value < lp->orig_lowbo[jj])
+          return( -jj );
+        /* OK, set the new bound */
         count++;
-        bound[ii] = value;
+        if(changelog == NULL)
+          bound[jj] = value;
+        else
+          modifyUndoLadder(changelog, jj, bound, value);
       }
+      i++;
     }
+
   }
-  return(count);
+  return( count );
 }
 
 int SOS_is_satisfied(SOSgroup *group, int sosindex, REAL *solution)
@@ -1129,7 +1403,7 @@ int SOS_is_satisfied(SOSgroup *group, int sosindex, REAL *solution)
 
 #ifdef Paranoia
   if((sosindex < 0) || (sosindex > group->sos_count)) {
-    report(lp, IMPORTANT, "SOS_is_satisfied: Invalid SOS index %d\n", sosindex);
+    report(lp, IMPORTANT, "SOS_is_satisfied: Invalid index %d\n", sosindex);
     return( SOS_COMPLETE );
   }
 #endif
@@ -1171,7 +1445,14 @@ int SOS_is_satisfied(SOSgroup *group, int sosindex, REAL *solution)
       if(abs(list[i]) != nn)
         status = SOS_INTERNALERROR;  /* Set consistency error (leading set variables are non-zero) */
       else {
-       /* Scan the active SOS variables; fail if some are zero */
+       /* Scan active SOS variables until we find a non-zero value */
+        while(count > 0) {
+          if(solution[lp->rows + abs(list[i])] != 0)
+            break;
+          i++;
+          count--;
+        }
+       /* Scan active non-zero SOS variables; break at first non-zero (rest required to be zero) */
         while(count > 0) {
           if(solution[lp->rows + abs(list[i])] == 0)
             break;
@@ -1196,7 +1477,7 @@ int SOS_is_satisfied(SOSgroup *group, int sosindex, REAL *solution)
         status = SOS_INFEASIBLE;   /* Too-many sequential non-zero variables */
     }
 
-   /* Scan the trailing set of SOS variables; fail if some are non-zero */
+    /* Scan the trailing set of SOS variables; fail if some are non-zero */
     if(status <= 0) {
       n--;
       while(i <= n) {
@@ -1207,7 +1488,7 @@ int SOS_is_satisfied(SOSgroup *group, int sosindex, REAL *solution)
       if(i <= n)
         status = SOS_INFEASIBLE;  /* Too-many sequential non-zero variables */
 
-     /* Code member deficiency for SOS3 separately */
+      /* Code member deficiency for SOS3 separately */
       else if((status == -1) && (type <= SOS3))
         status = SOS3_INCOMPLETE;
     }

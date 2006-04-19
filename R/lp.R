@@ -34,7 +34,9 @@ lp <- function(direction = "min", objective.in, const.mat, const.dir, const.rhs,
 	#
 	if(direction == "min")
 		direction <- 0
-	else direction <- 1
+	else if (direction == "max")
+                direction <- 1
+             else stop ("Direction must be 'max' or 'min'")
 	#
 	# Convert one-column data frame objective to vector. Add leading 0 to obejctive.
 	#
@@ -144,6 +146,8 @@ lp <- function(direction = "min", objective.in, const.mat, const.dir, const.rhs,
 		duals.from = as.double(duals.from),
 		duals.to = as.double(duals.to),
 		status = as.integer(status), PACKAGE="lpSolve")
+        lp.out$objective <- objective.in
+        lp.out$constraints <- big.const.mat
 	if(any(names(version) == "language"))
 		class(lp.out) <- "lp"
 	else oldClass(lp.out) <- "lp"
