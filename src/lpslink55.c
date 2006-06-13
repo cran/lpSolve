@@ -360,8 +360,6 @@ int *row_inds;       /* Holds locations for row-type constraints  */
 long col_ind_ctr, row_ind_ctr;
 long rc = *r_count, cc = *c_count, num_vars = *r_count * *c_count;
 
-FILE *hithere = fopen ("GGGHiThere", "w");
-
 /*
 ** Make an empty lp with r_count x c_count variables. If it fails, return.
 */
@@ -392,41 +390,32 @@ else
 */
 row_vals = calloc (cc, sizeof (double));
 col_inds = calloc (cc, sizeof (int));
-for (i = 0L; i < rc; i++)
+
+for (row_ind_ctr = 0L; row_ind_ctr < rc; row_ind_ctr++)
 {
     for (col_ind_ctr = 0; col_ind_ctr < cc; col_ind_ctr++) {
-        row_vals[col_ind_ctr] = 0.0;
-        col_inds[col_ind_ctr] = 0;
+        row_vals[col_ind_ctr] = 1.0;
+        this_element = 1 + (col_ind_ctr * rc) + row_ind_ctr;
+        col_inds[col_ind_ctr] = this_element;
     }
-    for (row_ind_ctr = 0; row_ind_ctr < rc; row_ind_ctr++) {
-        for (col_ind_ctr = 0; col_ind_ctr < cc; col_ind_ctr++) {
-            this_element = (col_ind_ctr * rc) + row_ind_ctr;
-            row_vals[col_ind_ctr] = costs[this_element];
-            col_inds[col_ind_ctr] = col_ind_ctr;
-        }
-    }
-    add_constraintex (lp, cc, row_vals, col_inds, r_signs[i], r_rhs[i]);
-} /* end loop to create row constraints */
+    add_constraintex (lp, cc, row_vals, col_inds, r_signs[row_ind_ctr], r_rhs[row_ind_ctr]);
+}
+
 free (row_vals);
 free (col_inds);
 
 col_vals = calloc (rc, sizeof (double));
 row_inds = calloc (rc, sizeof (int));
-for (i = 0L; i < cc; i++)
+
+for (col_ind_ctr = 0L; col_ind_ctr < cc; col_ind_ctr++)
 {
     for (row_ind_ctr = 0; row_ind_ctr < rc; row_ind_ctr++) {
-        col_vals[row_ind_ctr] = 0.0;
-        row_inds[row_ind_ctr] = 0;
+        col_vals[row_ind_ctr] = 1.0;
+        this_element = 1 + row_ind_ctr + col_ind_ctr * rc;
+        row_inds[row_ind_ctr] = this_element;
     }
-    for (col_ind_ctr = 0; col_ind_ctr < cc; col_ind_ctr++) {
-        for (row_ind_ctr = 0; row_ind_ctr < rc; row_ind_ctr++) {
-            this_element = (row_ind_ctr * cc) + col_ind_ctr;
-            col_vals[row_ind_ctr] = costs[this_element];
-            row_inds[row_ind_ctr] = row_ind_ctr;
-        }
-    }
-    add_constraintex (lp, rc, col_vals, row_inds, c_signs[i], c_rhs[i]);
-} /* end loop to create row constraints */
+    add_constraintex (lp, rc, col_vals, row_inds, c_signs[col_ind_ctr], c_rhs[col_ind_ctr]);
+}
 free (col_vals);
 free (row_inds);
 
@@ -442,7 +431,6 @@ if (*compute_sens > 0) {
     set_presolve (lp, PRESOLVE_SENSDUALS, 10);
 }
 
-fprintf (hithere, "That is so very true!\n");
 *status = (LONG_OR_INT) solve (lp);
 
 if ((int) *status != 0) {
