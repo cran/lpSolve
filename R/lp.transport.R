@@ -19,13 +19,6 @@ lp.transport <- function (cost.mat, direction = "min", row.signs, row.rhs, col.s
 #
 # Return value: list from lpsolve, including objective and optimal values.
 #
-# Check for the lpslink function. (It should have been loaded
-# by the library() function, though.)
-#
-    if (!is.loaded(symbol.C("lp_transbig"))) {
-            stop("Sorry, error loading the lpsolve.dll")
-    }
-#
 # Check that the cost matrix is in fact a matrix; convert
 # from data.frame if needed.
 #

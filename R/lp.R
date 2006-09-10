@@ -100,25 +100,6 @@ lp <- function(direction = "min", objective.in, const.mat, const.dir, const.rhs,
 		int.count <- length(int.vec)
 	}
 	#
-	# Check for the lpslink function, dyn.open if needed. (It should have been loaded
-	# by the library() function, though.)
-	#
-	if(!is.loaded(symbol.C("lpslink"))) {
-		base <- "d:/sam/students/lpsolve/lp_solve_4.0/lpsolve.dll"
-		if(any(names(version) == "language")) {
-			options(show.error.messages = FALSE)
-			load.ret <- try(dyn.load(base))
-			options(show.error.messages = TRUE)
-			if(inherits(load.ret, "try-error"))
-				stop("Sorry, error loading the lpsolve.dll")
-		}
-		else load.ret <- try(dyn.open(base))
-		if(inherits(load.ret, "Error"))
-			stop("Sorry, error loading the lpsolve.dll")
-		if(!is.loaded(symbol.C("lpslink")))
-			stop("Sorry, lpsolve.dll not loaded")
-	}
-	#
 	# Set up sensitivity stuff.
 	#
 	sens.coef.from <- sens.coef.to <- 0

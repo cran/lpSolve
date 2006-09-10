@@ -17,13 +17,6 @@ lp.assign <- function (cost.mat, direction="min", presolve = 0, compute.sens = 0
 # assignments.
 #
 # Check for the lpslink function, dyn.open if needed. (It should
-# have been loaded by the library() function, though.)
-#
-    if (!is.loaded(symbol.C("lp_transbig"))) {
-        stop("Sorry, error loading the lpsolve.dll")
-    }
-#
-# Check that the cost matrix is in fact a matrix; convert
 # from data.frame if needed.
 #
     if (!is.matrix(cost.mat))
