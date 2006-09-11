@@ -45,7 +45,7 @@ lp.assign <- function (cost.mat, direction="min", presolve = 0, compute.sens = 0
 # Set up the row and column constraints. Each is of the
 # "=1" type, represented by 3 (for "equals") 1.
 #
-    constcount <- as.integer(nr + nc)
+    const.count <- as.integer(nr + nc)
     intcount <- as.integer(varcount) # number of integers
     intvec <- as.integer(1:varcount) # indicators of integers
 #
@@ -60,8 +60,8 @@ lp.assign <- function (cost.mat, direction="min", presolve = 0, compute.sens = 0
     sens.coef.from <- sens.coef.to <- 0
     duals <- duals.from <- duals.to <- 0
     if (compute.sens) {
-        sens.coef.from <- sens.coef.to <- numeric(x.count)
-        duals <- duals.from <- duals.to <- numeric(x.count +
+        sens.coef.from <- sens.coef.to <- numeric(varcount)
+        duals <- duals.from <- duals.to <- numeric(varcount +
             const.count)
     }
     ## costs <- as.double (c(0, c(cost.mat)))

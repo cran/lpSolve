@@ -66,7 +66,7 @@ lp.transport <- function (cost.mat, direction = "min", row.signs, row.rhs, col.s
             stop ("Direction should be 'min' or 'max'")
     varcount <- as.integer(nr * nc)              # no of vars
     objective <- as.double(c(0, c(t(cost.mat))))
-    constcount <- as.integer(nr + nc)       # no of constraints
+    const.count <- as.integer(nr + nc)       # no of constraints
     rnum.signs <- rep(-1, nr)               # sign holder
 #
 # Set the signs: <, >, = turn into 1,2,3 respectively. We also
@@ -102,8 +102,8 @@ lp.transport <- function (cost.mat, direction = "min", row.signs, row.rhs, col.s
     sens.coef.from <- sens.coef.to <- 0
     duals <- duals.from <- duals.to <- 0
     if (compute.sens) {
-        sens.coef.from <- sens.coef.to <- numeric(x.count)
-        duals <- duals.from <- duals.to <- numeric(x.count +
+        sens.coef.from <- sens.coef.to <- numeric(varcount)
+        duals <- duals.from <- duals.to <- numeric(varcount +
             const.count)
     }
 #
