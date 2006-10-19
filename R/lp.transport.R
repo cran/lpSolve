@@ -1,5 +1,5 @@
 lp.transport <- function (cost.mat, direction = "min", row.signs, row.rhs, col.signs,
-    col.rhs, presolve = 0, compute.sens = 0)
+    col.rhs, presolve = 0, compute.sens = 0, integers = integer (nc * nr))
 {
 #
 # lp.transport: use lpsolve.dll to solve a transportation problem.
@@ -16,6 +16,7 @@ lp.transport <- function (cost.mat, direction = "min", row.signs, row.rhs, col.s
 #                      values means "yes." Currently mostly ignored.
 #        compute.sens: Numeric: compute sensitivities? Default 0 (no);
 #                      non-zero value means "yes."
+#            integers: Indicator of integer variables: default, all.
 #
 # Return value: list from lpsolve, including objective and optimal values.
 #
@@ -66,6 +67,12 @@ lp.transport <- function (cost.mat, direction = "min", row.signs, row.rhs, col.s
             stop ("Direction should be 'min' or 'max'")
     varcount <- as.integer(nr * nc)              # no of vars
     objective <- as.double(c(0, c(t(cost.mat))))
+    if (is.null (integers)) {
+        int.count <- 0
+        integers <- 0
+    }
+    else
+        int.count <- length(integers)
     const.count <- as.integer(nr + nc)       # no of constraints
     rnum.signs <- rep(-1, nr)               # sign holder
 #
@@ -120,6 +127,8 @@ lp.transport <- function (cost.mat, direction = "min", row.signs, row.rhs, col.s
 	csigns = as.integer (cnum.signs),
 	crhs = as.double (col.rhs),
 	objval = objval,
+        int.count = int.count,
+	integers = integers,
         solution = solution,
 	presolve = as.integer(presolve),
         compute.sens = as.integer(compute.sens),

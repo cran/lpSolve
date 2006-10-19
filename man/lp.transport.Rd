@@ -4,7 +4,7 @@
 \description{Interface to lp\_solve linear/integer programming
 system specifically for solving transportation problems}
 \usage{
-lp.transport (cost.mat, direction="min", row.signs, row.rhs, col.signs, col.rhs, presolve=0, compute.sens=0)
+lp.transport (cost.mat, direction="min", row.signs, row.rhs, col.signs, col.rhs, presolve=0, compute.sens=0, integers = integer(nc*nr) )
 }
 \arguments{
 \item{cost.mat}{Matrix of costs; ij-th element is the cost of transporting 
@@ -24,6 +24,10 @@ column constraints.}
 non-zero value means "yes." Currently ignored.}
 \item{compute.sens}{Numeric: compute sensitivity? Default 0 (no); any
 non-zero value means "yes."}
+\item{integers}{Vector of integers whose ith element gives the index 
+of the ith integer variable. Its length will be the number of integer 
+variables. Default: all variables are integer. Set to NULL to have no
+variables be integer.}
 }
 \details{
 This is a particular integer programming problem. All the decision variables

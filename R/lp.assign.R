@@ -49,9 +49,11 @@ lp.assign <- function (cost.mat, direction="min", presolve = 0, compute.sens = 0
     intcount <- as.integer(varcount) # number of integers
     intvec <- as.integer(1:varcount) # indicators of integers
 #
-# Prepare objective value, solution, and status
+# Prepare objective value, integer indicators, solution, and status
 #
     objval <- as.double(0)
+    int.count <- nc * nr
+    integers <- as.integer (numeric (int.count))
     solution <- as.double(numeric(nc * nr))
     status <- as.integer(0)
 #
@@ -75,6 +77,8 @@ lp.assign <- function (cost.mat, direction="min", presolve = 0, compute.sens = 0
 	csigns = as.integer (cnum.signs),
         crhs = as.double (col.rhs),
 	objval = objval,
+        int.count = int.count, 
+        integers = integers,
         solution = solution,
         presolve = as.integer(presolve),
         compute.sens = as.integer(compute.sens),

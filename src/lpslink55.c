@@ -327,7 +327,7 @@ return;
 ** This function handles "big" transportation problem. It takes in
 ** the number of rows and columns, the cost matrix, and the signs and
 ** right-hand sides of the constraints and builds everything else on the
-** fly. We assume that all variables are integers.
+** fly.
 */
 void lp_transbig (LONG_OR_INT *direction,     /* 1 for max, 0 for min       */
               LONG_OR_INT *r_count,           /* Number of rows             */
@@ -338,6 +338,8 @@ void lp_transbig (LONG_OR_INT *direction,     /* 1 for max, 0 for min       */
               LONG_OR_INT *c_signs,           /* Signs of col constraints   */
               double *c_rhs,                  /* RHS of col constraints     */
               double *obj_val,                /* Objective function value   */
+              LONG_OR_INT *int_count,         /* How many vars are integers?*/
+              LONG_OR_INT *integers,          /* Which vars. are integer?   */
               double *solution,               /* Result of call             */
               LONG_OR_INT *presolve,          /* Value of presolve          */
               LONG_OR_INT *compute_sens,      /* Want sensitivity?          */
@@ -422,10 +424,11 @@ free (row_inds);
 set_add_rowmode (lp, FALSE);
 
 /*
-** In this problem all variables are integers. set_int starts counting at 1.
+** Set integers. set_int starts counting at 1.
 */
-for (i = 1; i <= num_vars; i++)
-    set_int (lp, i, TRUE);
+if (*int_count  > 0)
+    for (i = 1; i <= *int_count; i++)
+        set_int (lp, integers[i], 1); /* Variable in ith element of integers */
 
 if (*compute_sens > 0) {
     set_presolve (lp, PRESOLVE_SENSDUALS, 10);

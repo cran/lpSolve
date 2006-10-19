@@ -36,7 +36,7 @@ supported here. The current version is maintained at
 \url{ftp://ftp.es.ele.tue.nl/pub/lp_solve}
 }
 \value{
-An lp object. See \code{link{lp.object}} for details.
+An lp object. See \code{\link{lp.object}} for details.
 }
 \author{Sam Buttrey, \email{buttrey@nps.edu}}
 \seealso{\code{\link{lp.assign}}, \code{\link{lp.transport}}}
