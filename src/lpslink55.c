@@ -289,6 +289,7 @@ if (*compute_sens > 0) {
 *status = (LONG_OR_INT) solve (lp);
 
 if ((int) *status != 0) {
+    delete_lp (lp);
     return;
 }
 
