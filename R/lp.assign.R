@@ -91,7 +91,7 @@ lp.assign <- function (cost.mat, direction="min", presolve = 0, compute.sens = 0
 #
 # Reset solution back into matrix form.
 #
-    lps.out$solution = matrix(lps.out$solution, nr, nc, byrow = FALSE)
+    lps.out$solution = matrix(lps.out$solution, nr, nc, byrow = TRUE)
     if (length(duals) > 0) {
         lps.out$sens.coef.from <- matrix(lps.out$sens.coef.from,
             nr, nc, byrow = TRUE)

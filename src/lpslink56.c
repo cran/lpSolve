@@ -11,6 +11,7 @@
 #include <malloc.h>
 #include <string.h>
 #include "lp_lib.h"
+#include <stdio.h>
 
 /*
 ** In R "integers" get passed as longs, whereas in S-Plus they're ints.
@@ -34,6 +35,9 @@ void lpslink (LONG_OR_INT *direction,         /* 1 for max, 0 for min        */
               double *constraints,            /* Has extra element on front  */
               LONG_OR_INT *int_count,         /* Number of integer variables */
               LONG_OR_INT *int_vec,           /* Indices of int. variables   */
+              LONG_OR_INT *bin_count,         /* Number of binary variables  */
+              LONG_OR_INT *bin_vec,           /* Indices of bin. variables   */
+              LONG_OR_INT *num_bin_solns,     /* # of all-bin solns to find  */
               double *obj_val,                /* Objective function value    */
               double *solution,               /* Result of call              */
               LONG_OR_INT *presolve,          /* Value of presolve           */
@@ -43,6 +47,14 @@ void lpslink (LONG_OR_INT *direction,         /* 1 for max, 0 for min        */
               double *duals,                  /* Dual values                 */
               double *duals_from,             /* Lower limit dual values     */
               double *duals_to,               /* Lower limit dual values     */
+              LONG_OR_INT *scale,             /* lpsolve scaling parameter   */
+              LONG_OR_INT *use_dense,         /* Use dense constraint matrix?*/
+              LONG_OR_INT *dense_col,         /* Dense constraint columns    */
+              double *dense_val,              /* Dense constraint values     */
+              LONG_OR_INT *dense_mat_nrow,    /* Dense constraint #entries   */
+              LONG_OR_INT *dense_ctr,         /* Dense constraint info       */
+              LONG_OR_INT *use_rw_file,       /* See notes below             */
+              char **rw_file,                 /* See notes below             */
               LONG_OR_INT *status);           /* Holds return value          */
 
 /*
@@ -83,7 +95,7 @@ vb_int_count   = int_count;
 
 /*
 ** Allocate objective (which holds the coefficients in the objective function).
-** We need an extra element at the front. If malloc() failes, get out.
+** We need an extra element at the front. If malloc() fails, get out.
 */
 vb_objective = (double *) malloc (1 + sizeof (double) * vb_x_count);
 if (vb_objective == (double *) NULL)
@@ -209,6 +221,9 @@ void lpslink (LONG_OR_INT *direction,         /* 1 for max, 0 for min        */
               double *constraints,            /* Has extra element on front  */
               LONG_OR_INT *int_count,         /* Number of integer variables */
               LONG_OR_INT *int_vec,           /* Indices of int. variables   */
+              LONG_OR_INT *bin_count,         /* Number of binary variables  */
+              LONG_OR_INT *bin_vec,           /* Indices of bin. variables   */
+              LONG_OR_INT *num_bin_solns,     /* # of all-bin solns to find  */
               double *obj_val,                /* Objective function value    */
               double *solution,               /* Result of call              */
               LONG_OR_INT *presolve,          /* Value of presolve           */
@@ -218,17 +233,49 @@ void lpslink (LONG_OR_INT *direction,         /* 1 for max, 0 for min        */
               double *duals,                  /* Dual values                 */
               double *duals_from,             /* Lower limit dual values     */
               double *duals_to,               /* Lower limit dual values     */
+              LONG_OR_INT *scale,             /* lpsolve scaling parameter   */
+              LONG_OR_INT *use_dense,         /* Use dense const. mat?       */
+              LONG_OR_INT *dense_col,         /* Dense constraint column     */
+              double *dense_val,              /* Dense constraint value      */
+              LONG_OR_INT *dense_mat_nrow,    /* Dense constraint #entries   */
+              LONG_OR_INT *dense_ctr,         /* Dense constraint info       */
+              LONG_OR_INT *use_rw_file,       /* See notes below             */
+              char **rw_file,                 /* See notes below             */
               LONG_OR_INT *status)            /* Holds return value          */
 {
 /*
 ** This is the function called from the outside.
 */
-int i,               /* Iteration variable      */
+/*
+** "rw file" notes: to get around some sort of a bug in lpSolve, we allow
+** callers to set "use_rw_file" to TRUE and pass a file name in rw_file.
+** This only makes sense in the case where all the decision variables are
+** binary and num_bin_solns > 1. Then instead of just adding constraints to 
+** lp and re-solving, we write the lp out to the rw_file, delete the lp, and
+** read the file back in every time. It's costly, but what can you do?
+*/
+
+int i = 0, j,        /* Iteration variables     */
     result;          /* Holds result of calls   */
+
+int dctr_ctr,        /* Holds our spot in the dense_ctr matrix              */
+    dmat_ctr,        /* Holds the current row of the dense_mat matrix       */
+    d_num;           /* Number of non-zero entries in this dense constraint */
+
 
 double *const_ptr;   /* Points to a constraint   */
 
+double *last_soln;   /* Points to last solution (for multiple soln case)    */
+double *new_ptr;     /* Point to a bit of "solution" 4 building constraint  */
+int soln_ctr;        /* Which solution are we on?                           */
+
+double new_rhs;      /* RHS value for new constraint.                       */
+LONG_OR_INT 
+    new_status;      /* Status for calls to "solve" after the first.        */
+
 lprec *lp;           /* Structure to hold the lp */
+
+FILE *filex_file;    /* Points to rw_file once that's been opened           */
 
 /*
 ** Make an empty lp with x_count variables. If it fails, return.
@@ -240,6 +287,11 @@ if (lp == (lprec *) NULL)
 
 set_verbose (lp, 1); /* CRITICAL */
 
+/* Set the direction. The default is minimize, but set it anyway. */
+if (*direction == 1)
+    set_maxim (lp);
+else
+    set_minim (lp);
 /*
 ** "Objective" is a vector. Set the objective function. Return on fail.
 */
@@ -247,33 +299,69 @@ result = set_obj_fn (lp, objective);
 if (result == 0)
     return;
 
-/* Set the direction. The default is minimize, but set it anyway. */
-if (*direction == 1)
-    set_maxim (lp);
-else
-    set_minim (lp);
+set_add_rowmode (lp, TRUE); /* Put problem into "row mode" */
 
 /*
-** If there are any constraints, point "constr_ptr" at the first one.
+** If there are any constraints, see if they're dense or regular.
 */
 if ((int) *const_count > 0) {
-    const_ptr = constraints;
+    if (*use_dense) {
+/*
+** For dense constraints, dense_ctr holds sets of three entries (# of non-
+** zero entries, direction, and rhs). Once we know the number of non-zero
+** entries, we get them out of dense_const and use that information to fill
+** up a row which we dispatch with add_constraintex.
+*/
+        dctr_ctr = 0;
+        dmat_ctr = 0;
+        for (i = 0; i < (int) *const_count; i++)
+        {
+            d_num = (int) dense_ctr[dctr_ctr];
+/*
+** The args. to add_constraintex are the lp, the number of non-zero entries,
+** a pointer to the values, an int pointer to the column numbers associated with
+** the values, the constraint type (<, = >) and the constraint's right side.
+*/
+            add_constraintex (lp, d_num, 
+                (double *) &(dense_val[dmat_ctr]),
+                (int *) &(dense_col[dmat_ctr]), 
+                (int) dense_ctr[dctr_ctr + 1], dense_ctr[dctr_ctr + 2]);
+            dctr_ctr += 3;
+            dmat_ctr += d_num;    
+        }
+/* Maybe replace this with set_row, set_rh_vec, set_constr_type? */
+    }
+    else {
+/*
+** If we're using regular constaints, point "constr_ptr" at the first one.
+*/
+        const_ptr = constraints;
 /*
 ** Add constraints, one at a time; then move constr_ptr up.
 */
 
-    for (i = 0; i < (int) *const_count; i++)
-    {
-        add_constraint (lp, const_ptr,
-            (short) const_ptr[(int) (*x_count) + 1], 
-                    const_ptr[(int) (*x_count) + 2]);
-        const_ptr += (int) *x_count + 2;
-    }
+        for (i = 0; i < (int) *const_count; i++)
+        {
+            add_constraint (lp, const_ptr,
+                (short) const_ptr[(int) (*x_count) + 1], 
+                        const_ptr[(int) (*x_count) + 2]);
+            const_ptr += (int) *x_count + 2;
+        }
+    } /* end "else" (i.e. if these are regular, non-dense constraints.) */
 } /* end "if there are any constraints. */
 
+set_add_rowmode (lp, FALSE); /* Take problem out of "row mode" */
+
+/*
+** Set integer and binary variables.
+*/
 if (*int_count > 0) {
     for (i = 0; i < (int) *int_count; i++)
         set_int (lp, (int) (int_vec[i]), TRUE);
+}
+if (*bin_count > 0) {
+    for (i = 0; i < (int) *bin_count; i++)
+        set_binary (lp, (int) (bin_vec[i]), TRUE);
 }
 
 /*
@@ -286,6 +374,8 @@ if (*compute_sens > 0) {
         set_presolve (lp, PRESOLVE_SENSDUALS, get_presolveloops (lp));
     }
 
+
+set_scaling (lp, *scale);
 *status = (LONG_OR_INT) solve (lp);
 
 if ((int) *status != 0) {
@@ -307,6 +397,79 @@ if (*compute_sens > 0) {
 *obj_val = get_objective (lp);
 
 get_variables (lp, solution);
+
+/*
+** If this is an all-binary problem, and more than one solution has
+** been asked for, let's get those other solutions. We do that in 
+** this way. First, add a constraint requiring that the objective function
+** not move below *obj_val, if this is a maximization problem, or above
+** it, if this is minimization. We need only do this once.
+*/
+soln_ctr = 1;
+if (*num_bin_solns > 1) {
+    add_constraint (lp, objective, 
+                    (*direction == 1) ? ROWTYPE_GE : ROWTYPE_LE, *obj_val);
+
+
+/* ==================================================
+** ------------------ WHILE LOOP --------------------
+** ==================================================
+** Loop until new status isn't 0 or we've produced all solutions asked for.
+*/
+    new_status = 0;
+    while (new_status == 0 && soln_ctr < *num_bin_solns) {
+/*
+** Point to the most recent solution and space in "solution" that we'll
+** use to build the new constraint.
+*/
+        last_soln = &(solution[(soln_ctr - 1) * *x_count]);
+        new_ptr = last_soln + *x_count; /* Move up *x_count elements */
+/*
+** Now we need to add one new constraint. We go through every element of 
+** the most recent solution. For every element that's a 1 in the solution,
+** put in a 1 in the constraint. For every 0, put a -1 in the constraint.
+** The rhs is the # of 1's minus 1, and the sign is <. So if there were 
+** five variables and the last solution was (1, 1, 1, 0, 0), the new 
+** constraint would say x1 + x2 + x3 -x4 -x5 < 2.
+*/
+        new_rhs = 0;
+        new_ptr[0] = 0;
+        for (j = 0; j < *x_count; j++) {
+            new_ptr[j + 1] = 2 * last_soln[j] - 1;  /* new_ptr is one-based */
+            new_rhs += last_soln[j];
+        }
+
+        if (*use_rw_file) {
+            filex_file = fopen (*rw_file, "w");
+            write_LP (lp, filex_file);
+            delete_lp (lp);
+            fclose (filex_file);
+            filex_file = fopen (*rw_file, "r");
+            lp = read_lp (filex_file, CRITICAL, (char *) NULL);
+            fclose (filex_file);
+	}
+        
+        result = add_constraint (lp, new_ptr, ROWTYPE_LE, new_rhs - 1);
+
+        set_scaling (lp, *scale);
+        new_status = (LONG_OR_INT) solve (lp);
+
+        if (new_status != 0) {
+            *num_bin_solns = soln_ctr;
+            return;
+        }
+        soln_ctr ++;
+/*
+** Fetch solution into new_ptr, then transfer just *x_count entries.
+*/
+        result = get_variables (lp, new_ptr);
+
+    } /* end "while" */
+
+    *num_bin_solns = soln_ctr;
+
+} /* end "multiple solutions */
+
 
 /*
 ** 
@@ -361,7 +524,7 @@ double *col_vals;    /* Holds the values for col-type constraints */
 int *row_inds;       /* Holds locations for row-type constraints  */
 
 long col_ind_ctr, row_ind_ctr;
-long rc = *r_count, cc = *c_count, num_vars = *r_count * *c_count;
+long rc = *r_count, cc = *c_count;
 
 /*
 ** Make an empty lp with r_count x c_count variables. If it fails, return.

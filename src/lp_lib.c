@@ -91,6 +91,10 @@
 /* ---------------------------------------------------------------------------------- */
 int callcount = 0;
 
+/* buttrey remove */
+int buttrey_thing = 0;
+FILE *buttrey_debugfile;
+
 /* Return lp_solve version information */
 void __WINAPI lp_solve_version(int *majorversion, int *minorversion, int *release, int *build)
 {
@@ -6712,21 +6716,42 @@ STATIC MYBOOL verify_basis(lprec *lp)
 {
   int    i, ii, k = 0;
   MYBOOL result = FALSE;
+if (buttrey_thing > 0)
+{
+buttrey_debugfile = fopen ("h:/temp/egaddeath.txt", "w");
+}
 
   for(i = 1; i <= lp->rows; i++) {
     ii = lp->var_basic[i];
+    if (buttrey_thing > 0) {
+        fprintf (buttrey_debugfile, "i %i, rows %i, ii %i, sum %i, basic[%i] %i\n",
+            i, lp->rows, ii, lp->sum, ii, lp->is_basic[ii]);
+        fflush (buttrey_debugfile);
+    }
     if((ii < 1) || (ii > lp->sum) || !lp->is_basic[ii]) {
+        if (buttrey_thing > 0) {
+            fprintf (buttrey_debugfile, "lp lib: We're inside.\n");
+        fflush (buttrey_debugfile);
+        }
       k = i;
       ii = 0;
       goto Done;
     }
   }
+    if (buttrey_thing > 0) {
+        fprintf (buttrey_debugfile, "lp lib: We're down here now.\n");
+        fflush (buttrey_debugfile);
+    }
 
   ii = lp->rows;
   for(i = 1; i <= lp->sum; i++) {
     if(lp->is_basic[i])
       ii--;
   }
+    if (buttrey_thing > 0) {
+        fprintf (buttrey_debugfile, "lp lib: About to return.\n");
+        fflush (buttrey_debugfile);
+    }
   result = (MYBOOL) (ii == 0);
 
 Done:

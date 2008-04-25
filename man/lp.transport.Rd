@@ -12,7 +12,7 @@ one item from source i to destination j.}
 \item{direction}{Character, length 1: "min" or "max"}
 \item{row.signs}{Vector of character strings giving the direction of the 
 row constraints: each value should be one of "<," "<=," "=," "==," ">," 
-or ">=."}
+or ">=." (In each pair the two values are identical.)}
 \item{row.rhs}{Vector of numeric values for the right-hand sides of the 
 row constraints.}
 \item{col.signs}{Vector of character strings giving the direction of the 

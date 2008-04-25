@@ -14,6 +14,7 @@ by \code{\link{lp.assign}} or \code{\link{lp.transport}})}
 \item{int.vec}{Vector of integer variables' indices, as entered}
 \item{objval}{{Value of objective function at optimum}}
 \item{solution}{Vector of optimal coefficients}
+\item{num.bin.solns}{Numeric indicator of number of solutions returned}
 \item{status}{Numeric indicator: 0 = success, 2 = no feasible solution}
 }
 \author{Sam Buttrey, \email{buttrey@nps.edu}}

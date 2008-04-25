@@ -1,4 +1,5 @@
 lp.R                    Solve linear or mixed integer linear programs
 lp.assign.R             Solve the assignment problem
 lp.transport.R          Solve the transportation problem
-print.lp                Print an lp object
+make.q8.R		Set up constraint matrix for 8 queens problem
+print.lp.R              Print an lp object
