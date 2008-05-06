@@ -1,6 +1,6 @@
 Package: lpSolve
-Version: 5.6.1
-Date: 2008-04-25
+Version: 5.6.2
+Date: 2008-05-06
 Title: Interface to Lp_solve v. 5.5 to solve linear/integer programs
 Author: Michel Berkelaar and others
 Maintainer: Sam Buttrey <buttrey@nps.edu>
@@ -10,4 +10,4 @@ Description: Lp_solve is freely available (under LGPL 2) software for
     general linear/integer problems, assignment problems, and transportation
     problems. This version calls lp_solve version 5.5.
 License: LGPL-2
-Packaged: Sun Apr 27 20:12:03 2008; sebuttre
+Packaged: Tue May  6 15:04:25 2008; sebuttre
