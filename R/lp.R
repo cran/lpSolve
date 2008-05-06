@@ -183,20 +183,20 @@ lp <- function(direction = "min", objective.in, const.mat, const.dir, const.rhs,
 	# Do the same for binary.vec.
 	#
 	if (!missing (all.bin) && all.bin) {
-		bin.vec <- 1:length(solution)
-		bin.count <- length(bin.vec)
+		binary.vec <- 1:length(solution)
+		bin.count <- length(binary.vec)
 	}
 	else
 	{
 		if(missing(binary.vec)) {
 			bin.count <- 0
-			bin.vec <- 0
+			binary.vec <- 0
 		}
 		else
 			bin.count <- length(binary.vec)
 	}
 	# If all variables are binary, set all.bin to TRUE.
-      if (length(bin.vec) == length(solution)) all.bin <- TRUE
+      if (length(binary.vec) == length(solution)) all.bin <- TRUE
 	#
 	# If more than one solution is called for, prepare for that. "Solution" will need
       # one extra element.
@@ -241,7 +241,7 @@ lp <- function(direction = "min", objective.in, const.mat, const.dir, const.rhs,
 		int.count = as.integer(int.count),
 		int.vec = as.integer(int.vec),
 		bin.count = as.integer(bin.count),
-		bin.vec = as.integer(bin.vec),
+		binary.vec = as.integer(binary.vec),
                 num.bin.solns = as.integer (num.bin.solns),
 		objval = as.double(objval),
 		solution = as.double(solution),
