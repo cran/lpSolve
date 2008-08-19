@@ -1,5 +1,5 @@
 lp.transport <- function (cost.mat, direction = "min", row.signs, row.rhs, col.signs,
-    col.rhs, presolve = 0, compute.sens = 0, integers = integer (nc * nr))
+    col.rhs, presolve = 0, compute.sens = 0, integers = 1:(nc * nr))
 {
 #
 # lp.transport: use lpsolve.dll to solve a transportation problem.
@@ -95,11 +95,6 @@ lp.transport <- function (cost.mat, direction = "min", row.signs, row.rhs, col.s
     if (any(cnum.signs == -1))
         stop(paste("Unknown column sign in position ", which(cnum.signs ==
             -1)[1]))
-#
-# Set up integer indicator: all variables are integers here.
-#
-    intcount <- as.integer(varcount)
-    intvec <- as.integer(1:varcount)
 #
 # A few more things, plus dual action.
 #

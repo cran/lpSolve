@@ -203,7 +203,7 @@ lp <- function(direction = "min", objective.in, const.mat, const.dir, const.rhs,
 	#
 		if (num.bin.solns > 1)
                 if (all.bin)	
-                    solution <- c(0, rep (solution, 2 * num.bin.solns))
+                    solution <- c(0, rep (solution, num.bin.solns))
 		    else {
                     warning ("Num.bin.solns can only be > 1 if all variables are binary")
                     num.bin.solns <- 1

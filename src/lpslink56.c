@@ -587,10 +587,10 @@ free (row_inds);
 set_add_rowmode (lp, FALSE);
 
 /*
-** Set integers. set_int starts counting at 1.
+** Set integers.
 */
 if (*int_count  > 0)
-    for (i = 1; i <= *int_count; i++)
+    for (i = 0; i < *int_count; i++)
         set_int (lp, integers[i], 1); /* Variable in ith element of integers */
 
 if (*compute_sens > 0) {
