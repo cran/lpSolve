@@ -52,7 +52,7 @@ this to TRUE if you need num.bin.solns > 1, until the bug is found.}
 \details{
 This function calls the lp\_solve 5.5 solver. That system has many options not
 supported here. The current version is maintained at
-\url{ftp://ftp.es.ele.tue.nl/pub/lp_solve}
+\url{http://lpsolve.sourcforge.com/5.5}
 }
 \value{
 An lp object. See \code{\link{lp.object}} for details.

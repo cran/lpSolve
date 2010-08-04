@@ -51,7 +51,7 @@ void lpslink (LONG_OR_INT *direction,         /* 1 for max, 0 for min        */
               LONG_OR_INT *dense_col,         /* Dense constraint columns    */
               double *dense_val,              /* Dense constraint values     */
               LONG_OR_INT *dense_mat_nrow,    /* Dense constraint #entries   */
-              LONG_OR_INT *dense_ctr,         /* Dense constraint info       */
+              double *dense_ctr,              /* Dense constraint info       */
               LONG_OR_INT *use_rw_file,       /* See notes below             */
               char **rw_file,                 /* See notes below             */
               LONG_OR_INT *status);           /* Holds return value          */
@@ -237,7 +237,7 @@ void lpslink (LONG_OR_INT *direction,         /* 1 for max, 0 for min        */
               LONG_OR_INT *dense_col,         /* Dense constraint column     */
               double *dense_val,              /* Dense constraint value      */
               LONG_OR_INT *dense_mat_nrow,    /* Dense constraint #entries   */
-              LONG_OR_INT *dense_ctr,         /* Dense constraint info       */
+              double *dense_ctr,              /* Dense constraint info       */
               LONG_OR_INT *use_rw_file,       /* See notes below             */
               char **rw_file,                 /* See notes below             */
               LONG_OR_INT *status)            /* Holds return value          */
@@ -260,7 +260,6 @@ int i = 0, j,        /* Iteration variables     */
 int dctr_ctr,        /* Holds our spot in the dense_ctr matrix              */
     dmat_ctr,        /* Holds the current row of the dense_mat matrix       */
     d_num;           /* Number of non-zero entries in this dense constraint */
-
 
 double *const_ptr;   /* Points to a constraint   */
 
