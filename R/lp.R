@@ -257,7 +257,7 @@ lp <- function(direction = "min", objective.in, const.mat, const.dir, const.rhs,
 		dense.col = as.integer (dense.col),
 		dense.val = as.double (dense.val),
                 dense.const.nrow = as.integer (dense.const.nrow),
-                dense.ctr = as.integer (dense.ctr),
+                dense.ctr = as.double (dense.ctr),
                 use.rw = as.integer (use.rw),
                 tmp = as.character(tmp),
 		status = as.integer(status), PACKAGE="lpSolve")

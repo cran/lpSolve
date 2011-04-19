@@ -52,7 +52,9 @@ this to TRUE if you need num.bin.solns > 1, until the bug is found.}
 \details{
 This function calls the lp\_solve 5.5 solver. That system has many options not
 supported here. The current version is maintained at
-\url{http://lpsolve.sourcforge.com/5.5}
+\url{http://lpsolve.sourceforge.net/5.5}
+
+Note that every variable is assumed to be >= 0!
 }
 \value{
 An lp object. See \code{\link{lp.object}} for details.
@@ -77,6 +79,12 @@ lp ("max", f.obj, f.con, f.dir, f.rhs)
 \dontrun{Success: the objective function is 40.5}
 lp ("max", f.obj, f.con, f.dir, f.rhs)$solution
 \dontrun{[1] 0.0 4.5 0.0}
+#
+# The same problem using the dense constraint approach:
+#
+f.con.d <- matrix (c(rep (1:2,each=3), rep (1:3, 2), t(f.con)), ncol=3)
+lp ("max", f.obj, , f.dir, f.rhs, dense.const=f.con.d)
+\dontrun{Success: the objective function is 40.5}
 #
 # Get sensitivities
 #
@@ -113,7 +121,8 @@ lp ("max", f.obj, f.con, f.dir, f.rhs, int.vec=1:3, compute.sens=TRUE)$duals
 \dontrun{[1] 1 0 0 7 0}
 #
 # Here's an example in which we want more than one solution to a problem
-# in which all variables are binary: the 8-queens problem.
+# in which all variables are binary: the 8-queens problem, 
+# with dense constraints.
 #
 chess.obj <- rep (1, 64)
 q8 <- make.q8 ()
