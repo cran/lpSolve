@@ -623,7 +623,7 @@ void LUSOL_report(LUSOLrec *LUSOL, int msglevel, char *format, ...)
 
   va_start(ap, format);
   if(LUSOL == NULL) {
-    vfprintf(stderr, format, ap);
+    REvprintf(format, ap);
   }
   else if(msglevel >= 0  /*LUSOL->luparm[2]*/) {
     if(LUSOL->writelog != NULL) {

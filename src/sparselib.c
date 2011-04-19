@@ -8,7 +8,7 @@
 #include "sparselib.h"
 
 #include "lpkit.h"
-
+#include <R.h>
 
 sparseMatrix *createMatrix(int dimLimit, int lenLimit, int initVectors)
 {
@@ -268,9 +268,9 @@ MYBOOL verifyVector(sparseVector *sparse)
   if(err == 0)
     return(TRUE);
   else if(err == 1)
-    printf("Invalid sparse vector index order");
+    Rprintf("Invalid sparse vector index order");
   else if(err == 2)
-    printf("Invalid sparse vector diagonal value");
+    Rprintf("Invalid sparse vector diagonal value");
   return(FALSE);
 }
 
@@ -949,19 +949,19 @@ void printVector(int n, sparseVector *sparse, int modulo )
       k = n+1;
     while (j < k) {
       if(mod(j, modulo) == 1) 
-        printf("\n%2d:%12g", j, 0.0);
+        Rprintf("\n%2d:%12g", j, 0.0);
       else
-        printf(" %2d:%12g", j, 0.0);
+        Rprintf(" %2d:%12g", j, 0.0);
       j++;
     }
     if(k<=n) {
       if(mod(j, modulo) == 1) 
-        printf("\n%2d:%12g", k, sparse->value[i]);
+        Rprintf("\n%2d:%12g", k, sparse->value[i]);
       else
-        printf(" %2d:%12g", k, sparse->value[i]);
+        Rprintf(" %2d:%12g", k, sparse->value[i]);
     }
   }
-  if(mod(j, modulo) != 0) printf("\n");
+  if(mod(j, modulo) != 0) Rprintf("\n");
 }
 
 

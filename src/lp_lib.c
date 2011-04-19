@@ -5336,7 +5336,7 @@ lprec * __WINAPI read_XLI(char *xliname, char *modelname, char *dataname, char *
     lp->verbose = verbose;
     if(!set_XLI(lp, xliname)) {
       free_lp(&lp);
-      printf("read_XLI: No valid XLI package selected or available.\n");
+      Rprintf("read_XLI: No valid XLI package selected or available.\n");
     }
     else {
       if(!lp->xli_readmodel(lp, modelname, dataname, options, verbose))

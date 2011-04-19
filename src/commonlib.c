@@ -21,6 +21,8 @@
 # include "lp_fortify.h"
 #endif
 
+#include <R.h>
+
 
 /* Math operator equivalence function */
 int intpow(int base, int exponent)
@@ -752,11 +754,11 @@ void printvec( int n, REAL *x, int modulo )
   if (modulo <= 0) modulo = 5;
   for (i = 1; i<=n; i++) {
     if(mod(i, modulo) == 1)
-      printf("\n%2d:%12g", i, x[i]);
+      Rprintf("\n%2d:%12g", i, x[i]);
     else
-      printf(" %2d:%12g", i, x[i]);
+      Rprintf(" %2d:%12g", i, x[i]);
   }
-  if(i % modulo != 0) printf("\n");
+  if(i % modulo != 0) Rprintf("\n");
 }
 
 

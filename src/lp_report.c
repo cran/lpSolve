@@ -25,6 +25,10 @@
 #include "commonlib.h"
 #include "lp_report.h"
 
+#include <R.h>
+#include <R_ext/Print.h>
+
+
 #include "mmio.h"
 
 #ifdef FORTIFY
@@ -59,7 +63,7 @@ void __VACALL report(lprec *lp, int level, char *format, ...)
 
   if(lp == NULL) {
     va_start(ap, format);
-      vfprintf(stderr, format, ap);
+      REvprintf( format, ap);
     va_end(ap);
   }
   else if(level <= lp->verbose) {
@@ -103,7 +107,7 @@ STATIC void debug_print(lprec *lp, char *format, ...)
     va_start(ap, format);
     if (lp == NULL)
     {
-      vfprintf(stderr, format, ap);
+      REvprintf( format, ap);
       fputc('\n', stderr);
     }
     else if(lp->debuginfo != NULL)

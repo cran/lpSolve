@@ -1,9 +1,9 @@
 Package: lpSolve
-Version: 5.6.6
+Version: 5.6.7
 Date: 2011-04-19
 Title: Interface to Lp_solve v. 5.5 to solve linear/integer programs
 Author: Michel Berkelaar and others
-Maintainer: Sam Buttrey <buttrey@nps.edu>
+Maintainer: ORPHANED
 Description: Lp_solve is freely available (under LGPL 2) software for
         solving linear, integer and mixed integer programs. In this
         implementation we supply a "wrapper" function in C and some R
@@ -11,6 +11,10 @@ Description: Lp_solve is freely available (under LGPL 2) software for
         assignment problems, and transportation problems. This version
         calls lp_solve version 5.5.
 License: LGPL-2
-Packaged: 2011-04-25 22:19:20 UTC; sebuttre
+Packaged: 2013-03-23 07:07:38 UTC; ripley
 Repository: CRAN
-Date/Publication: 2011-04-26 06:30:54
+Date/Publication: 2013-03-23 08:30:41
+NeedsCompilation: yes
+X-CRAN-Original-Maintainer: Sam Buttrey <buttrey@nps.edu>
+X-CRAN-Comment: Orphaned on 2013-03-23 as the maintainer is
+        unresponsive.

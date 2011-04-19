@@ -215,6 +215,7 @@
 #include "hbio.h"
 #include <string.h>
 #include <math.h>
+#include<R.h>
 
 char *substr(const char* S, const int pos, const int len);
 void upcase(char* S);
@@ -251,7 +252,7 @@ int readHB_info(const char* filename, int* M, int* N, int* nz, char** Type,
     if ( mat_type == NULL ) IOHBTerminate("Insufficient memory for mat_typen");
 
     if ( (in_file = fopen( filename, "r")) == NULL ) {
-       fprintf(stderr,"Error: Cannot open file: %s\n",filename);
+       REprintf("Error: Cannot open file: %s\n",filename);
        return 0;
     }
 
@@ -393,7 +394,7 @@ int readHB_mat_double(const char* filename, int colptr[], int rowind[],
     char line[BUFSIZ];
 
     if ( (in_file = fopen( filename, "r")) == NULL ) {
-       fprintf(stderr,"Error: Cannot open file: %s\n",filename);
+	REprintf("Error: Cannot open file: %s\n",filename);
        return 0;
     }
 
@@ -521,8 +522,8 @@ int readHB_newmat_double(const char* filename, int* M, int* N, int* nonzeros,
         if ( *rowind == NULL ) IOHBTerminate("Insufficient memory for rowind.\n");
         if ( Type[0] == 'C' ) {
 /*
-   fprintf(stderr, "Warning: Reading complex data from HB file %s.\n",filename);
-   fprintf(stderr, "         Real and imaginary parts will be interlaced in val[].\n");
+   REprintf("Warning: Reading complex data from HB file %s.\n",filename);
+   REprintf("         Real and imaginary parts will be interlaced in val[].\n");
 */
            /* Malloc enough space for real AND imaginary parts of val[] */
            *val = (double *)malloc(*nonzeros*sizeof(double)*2);
@@ -574,7 +575,7 @@ int readHB_aux_double(const char* filename, const char AuxType, double b[])
     char line[BUFSIZ];
 
     if ((in_file = fopen( filename, "r")) == NULL) {
-      fprintf(stderr,"Error: Cannot open file: %s\n",filename);
+      REprintf("Error: Cannot open file: %s\n",filename);
       return 0;
     }
 
@@ -585,13 +586,13 @@ int readHB_aux_double(const char* filename, const char AuxType, double b[])
 
     if (Nrhs <= 0)
     {
-      fprintf(stderr, "Warn: Attempt to read auxillary vector(s) when none are present.\n");
+      REprintf("Warn: Attempt to read auxillary vector(s) when none are present.\n");
       return 0;
     }
     if (Rhstype[0] != 'F' )
     {
-      fprintf(stderr,"Warn: Attempt to read auxillary vector(s) which are not stored in Full form.\n");
-      fprintf(stderr,"       Rhs must be specified as full. \n");
+      REprintf("Warn: Attempt to read auxillary vector(s) which are not stored in Full form.\n");
+      REprintf("       Rhs must be specified as full. \n");
       return 0;
     }
 
@@ -608,11 +609,11 @@ int readHB_aux_double(const char* filename, const char AuxType, double b[])
     if ( Rhstype[2] == 'X' ) nvecs++;
 
     if ( AuxType == 'G' && Rhstype[1] != 'G' ) {
-      fprintf(stderr, "Warn: Attempt to read auxillary Guess vector(s) when none are present.\n");
+      REprintf("Warn: Attempt to read auxillary Guess vector(s) when none are present.\n");
       return 0;
     }
     if ( AuxType == 'X' && Rhstype[2] != 'X' ) {
-      fprintf(stderr, "Warn: Attempt to read auxillary eXact solution vector(s) when none are present.\n");
+      REprintf("Warn: Attempt to read auxillary eXact solution vector(s) when none are present.\n");
       return 0;
     }
 
@@ -711,12 +712,12 @@ int readHB_newaux_double(const char* filename, const char AuxType, double** b)
 
   readHB_info(filename, &M, &N, &nonzeros, &Type, &Nrhs);
         if ( Nrhs <= 0 ) {
-          fprintf(stderr,"Warn: Requested read of aux vector(s) when none are present.\n");
+          REprintf("Warn: Requested read of aux vector(s) when none are present.\n");
           return 0;
         } else {
           if ( Type[0] == 'C' ) {
-            fprintf(stderr, "Warning: Reading complex aux vector(s) from HB file %s.",filename);
-            fprintf(stderr, "         Real and imaginary parts will be interlaced in b[].");
+            REprintf("Warning: Reading complex aux vector(s) from HB file %s.",filename);
+            REprintf("         Real and imaginary parts will be interlaced in b[].");
             *b = (double *)malloc(M*Nrhs*sizeof(double)*2);
             if ( *b == NULL ) IOHBTerminate("Insufficient memory for rhs.\n");
             return readHB_aux_double(filename, AuxType, *b);
@@ -766,7 +767,7 @@ int writeHB_mat_double(const char* filename, int M, int N,
 
     if ( filename != NULL ) {
        if ( (out_file = fopen( filename, "w")) == NULL ) {
-         fprintf(stderr,"Error: Cannot open file: %s\n",filename);
+         REprintf("Error: Cannot open file: %s\n",filename);
          return 0;
        }
     } else out_file = stdout;
@@ -904,7 +905,7 @@ int writeHB_mat_double(const char* filename, int M, int N,
     }
 
     if ( fclose(out_file) != 0){
-      fprintf(stderr,"Error closing file in writeHB_mat_double().\n");
+      REprintf("Error closing file in writeHB_mat_double().\n");
       return 0;
     } else return 1;
 
@@ -944,7 +945,7 @@ int readHB_mat_char(const char* filename, int colptr[], int rowind[],
     char Ptrfmt[17], Indfmt[17], Rhsfmt[21];
 
     if ( (in_file = fopen( filename, "r")) == NULL ) {
-       fprintf(stderr,"Error: Cannot open file: %s\n",filename);
+       REprintf("Error: Cannot open file: %s\n",filename);
        return 0;
     }
 
@@ -1069,7 +1070,7 @@ int readHB_newmat_char(const char* filename, int* M, int* N, int* nonzeros, int*
     char Ptrfmt[17], Indfmt[17], Rhsfmt[21];
 
     if ((in_file = fopen( filename, "r")) == NULL) {
-      fprintf(stderr,"Error: Cannot open file: %s\n",filename);
+      REprintf("Error: Cannot open file: %s\n",filename);
       return 0;
      }
 
@@ -1088,8 +1089,8 @@ int readHB_newmat_char(const char* filename, int* M, int* N, int* nonzeros, int*
         if ( *rowind == NULL ) IOHBTerminate("Insufficient memory for rowind.\n");
         if ( Type[0] == 'C' ) {
 /*
-   fprintf(stderr, "Warning: Reading complex data from HB file %s.\n",filename);
-   fprintf(stderr, "         Real and imaginary parts will be interlaced in val[].\n");
+   REprintf("Warning: Reading complex data from HB file %s.\n",filename);
+   REprintf("         Real and imaginary parts will be interlaced in val[].\n");
 */
            /* Malloc enough space for real AND imaginary parts of val[] */
            *val = (char *)malloc(*nonzeros*Valwidth*sizeof(char)*2);
@@ -1140,7 +1141,7 @@ int readHB_aux_char(const char* filename, const char AuxType, char b[])
     char *ThisElement;
 
     if ((in_file = fopen( filename, "r")) == NULL) {
-      fprintf(stderr,"Error: Cannot open file: %s\n",filename);
+      REprintf("Error: Cannot open file: %s\n",filename);
       return 0;
      }
 
@@ -1151,13 +1152,13 @@ int readHB_aux_char(const char* filename, const char AuxType, char b[])
 
     if (Nrhs <= 0)
     {
-      fprintf(stderr, "Warn: Attempt to read auxillary vector(s) when none are present.\n");
+      REprintf("Warn: Attempt to read auxillary vector(s) when none are present.\n");
       return 0;
     }
     if (Rhstype[0] != 'F' )
     {
-      fprintf(stderr,"Warn: Attempt to read auxillary vector(s) which are not stored in Full form.\n");
-      fprintf(stderr,"       Rhs must be specified as full. \n");
+      REprintf("Warn: Attempt to read auxillary vector(s) which are not stored in Full form.\n");
+      REprintf("       Rhs must be specified as full. \n");
       return 0;
     }
 
@@ -1174,11 +1175,11 @@ int readHB_aux_char(const char* filename, const char AuxType, char b[])
     if ( Rhstype[2] == 'X' ) nvecs++;
 
     if ( AuxType == 'G' && Rhstype[1] != 'G' ) {
-      fprintf(stderr, "Warn: Attempt to read auxillary Guess vector(s) when none are present.\n");
+      REprintf("Warn: Attempt to read auxillary Guess vector(s) when none are present.\n");
       return 0;
     }
     if ( AuxType == 'X' && Rhstype[2] != 'X' ) {
-      fprintf(stderr, "Warn: Attempt to read auxillary eXact solution vector(s) when none are present.\n");
+      REprintf("Warn: Attempt to read auxillary eXact solution vector(s) when none are present.\n");
       return 0;
     }
 
@@ -1285,7 +1286,7 @@ int readHB_newaux_char(const char* filename, const char AuxType, char** b, char*
     char Ptrfmt[17], Indfmt[17], Valfmt[21];
 
     if ((in_file = fopen( filename, "r")) == NULL) {
-      fprintf(stderr,"Error: Cannot open file: %s\n",filename);
+      REprintf("Error: Cannot open file: %s\n",filename);
       return 0;
      }
 
@@ -1297,13 +1298,13 @@ int readHB_newaux_char(const char* filename, const char AuxType, char** b, char*
                   &Ptrcrd, &Indcrd, &Valcrd, &Rhscrd, Rhstype);
      fclose(in_file);
         if ( Nrhs == 0 ) {
-          fprintf(stderr,"Warn: Requested read of aux vector(s) when none are present.\n");
+          REprintf("Warn: Requested read of aux vector(s) when none are present.\n");
           return 0;
         } else {
           ParseRfmt(*Rhsfmt,&Rhsperline,&Rhswidth,&Rhsprec,&Rhsflag);
           if ( Type[0] == 'C' ) {
-            fprintf(stderr, "Warning: Reading complex aux vector(s) from HB file %s.",filename);
-            fprintf(stderr, "         Real and imaginary parts will be interlaced in b[].");
+            REprintf("Warning: Reading complex aux vector(s) from HB file %s.",filename);
+            REprintf("         Real and imaginary parts will be interlaced in b[].");
             *b = (char *)malloc(Nrow*Nrhs*Rhswidth*sizeof(char)*2);
             if ( *b == NULL ) IOHBTerminate("Insufficient memory for rhs.\n");
       return readHB_aux_char(filename, AuxType, *b);
@@ -1353,7 +1354,7 @@ int writeHB_mat_char(const char* filename, int M, int N,
 
     if ( filename != NULL ) {
        if ( (out_file = fopen( filename, "w")) == NULL ) {
-         fprintf(stderr,"Error: Cannot open file: %s\n",filename);
+         REprintf("Error: Cannot open file: %s\n",filename);
          return 0;
        }
     } else out_file = stdout;
@@ -1483,7 +1484,7 @@ int writeHB_mat_char(const char* filename, int M, int N,
     }
 
     if ( fclose(out_file) != 0){
-      fprintf(stderr,"Error closing file in writeHB_mat_char().\n");
+      REprintf("Error closing file in writeHB_mat_char().\n");
       return 0;
     } else return 1;
 
@@ -1559,7 +1560,7 @@ int ParseRfmt(char* fmt, int* perline, int* width, int* prec, int* flag)
     } else if (strchr(fmt,'F') != NULL) {
        *flag = 'F';
     } else {
-      fprintf(stderr,"Real format %s in H/B file not supported.\n",fmt);
+      REprintf("Real format %s in H/B file not supported.\n",fmt);
       return 0;
     }
     tmp = strchr(fmt,'(');
@@ -1602,7 +1603,8 @@ void upcase(char* S)
 
 void IOHBTerminate(char* message)
 {
-   fprintf(stderr,message);
-   exit(1);
+//   fprintf(stderr,message);
+//   exit(1);
+    error(message);
 }
 

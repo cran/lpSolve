@@ -13,6 +13,8 @@
 #include <ctype.h>
 
 #include "mmio.h"
+#include <R.h>
+#include <R_ext/Print.h>
 
 int mm_read_unsymmetric_sparse(const char *fname, int *M_, int *N_, int *nz_,
                 double **val_, int **I_, int **J_)
@@ -30,8 +32,8 @@ int mm_read_unsymmetric_sparse(const char *fname, int *M_, int *N_, int *nz_,
  
     if (mm_read_banner(f, &matcode) != 0)
     {
-        printf("mm_read_unsymetric: Could not process Matrix Market banner ");
-        printf(" in file [%s]\n", fname);
+        Rprintf("mm_read_unsymetric: Could not process Matrix Market banner ");
+        Rprintf(" in file [%s]\n", fname);
         return -1;
     }
  
@@ -40,8 +42,8 @@ int mm_read_unsymmetric_sparse(const char *fname, int *M_, int *N_, int *nz_,
     if ( !(mm_is_real(matcode) && mm_is_matrix(matcode) &&
             mm_is_sparse(matcode)))
     {
-        fprintf(stderr, "Sorry, this application does not support ");
-        fprintf(stderr, "Market Market type: [%s]\n",
+        REprintf( "Sorry, this application does not support ");
+        REprintf( "Market Market type: [%s]\n",
                 mm_typecode_to_str(matcode));
         return -1;
     }
@@ -50,7 +52,7 @@ int mm_read_unsymmetric_sparse(const char *fname, int *M_, int *N_, int *nz_,
  
     if (mm_read_mtx_crd_size(f, &M, &N, &nz) !=0)
     {
-        fprintf(stderr, "read_unsymmetric_sparse(): could not parse matrix size.\n");
+        REprintf( "read_unsymmetric_sparse(): could not parse matrix size.\n");
         return -1;
     }
  

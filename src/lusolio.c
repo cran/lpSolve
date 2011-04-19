@@ -4,6 +4,7 @@
 #include "mmio.h"
 #include "hbio.h"
 #include "lusolio.h"
+#include <R.h>
 
 /* Utility routines to read matrix files in the Coordinate Text File format*/
 
@@ -23,7 +24,7 @@ MYBOOL ctf_read_A(char *filename, int maxm, int maxn, int maxnz,
 
   iofile = fopen(filename, "r" );
   if(iofile == NULL) {
-    printf("A file %s does not exist\n", filename);
+    Rprintf("A file %s does not exist\n", filename);
     return( FALSE );
   }
 
@@ -48,15 +49,15 @@ MYBOOL ctf_read_A(char *filename, int maxm, int maxn, int maxnz,
   }
   fclose( iofile );
   if(!eof) {
-    printf("Too much data in A file.  Increase maxnz\n");
-    printf("Current maxnz = %d\n", maxnz);
+    Rprintf("Too much data in A file.  Increase maxnz\n");
+    Rprintf("Current maxnz = %d\n", maxnz);
     return( FALSE );
   }
-  printf("A  read successfully\n");
-  printf("m      = %d   n      = %d   nnzero = %d\n",
+  Rprintf("A  read successfully\n");
+  Rprintf("m      = %d   n      = %d   nnzero = %d\n",
           *m, *n, *nnzero);
   if (*m > maxm  ||  *n > maxn) {
-    printf("However, matrix dimensions exceed maxm or maxn\n");
+    Rprintf("However, matrix dimensions exceed maxm or maxn\n");
     return( FALSE );
   }
   return( TRUE );
@@ -79,7 +80,7 @@ MYBOOL ctf_read_b(char *filename, int m, REAL *b)
 
   iofile = fopen(filename, "r");
   if(iofile == NULL) {
-    printf("b file %s does not exist\n", filename);
+    Rprintf("b file %s does not exist\n", filename);
     return( FALSE );
   }
 
@@ -93,12 +94,12 @@ MYBOOL ctf_read_b(char *filename, int m, REAL *b)
   }
 
   fclose( iofile );
-  printf("b  read successfully\n");
+  Rprintf("b  read successfully\n");
   return( TRUE );
 
 x350:
   fclose( iofile );
-  printf("Not enough data in b file.\n");
+  Rprintf("Not enough data in b file.\n");
   return( FALSE );
 }
 
@@ -120,22 +121,22 @@ MYBOOL mmf_read_A(char *filename, int maxM, int maxN, int maxnz,
     return( status );
 
   if(mm_read_banner(f, &matcode) != 0) {
-    printf("Could not process Matrix Market banner.\n");
+    Rprintf("Could not process Matrix Market banner.\n");
     goto x900;
   }
 
   /*  Screen matrix types since LUSOL only supports a 
       subset of the Matrix Market data types. */
   if(mm_is_complex(matcode) || mm_is_pattern(matcode)) {
-    printf("Sorry, this application does not support ");
-    printf("Market Market type: [%s]\n", mm_typecode_to_str(matcode));
+    Rprintf("Sorry, this application does not support ");
+    Rprintf("Market Market type: [%s]\n", mm_typecode_to_str(matcode));
     goto x900;
   }
 
   /* Verify that we have sufficient array storage */
   filldata = (MYBOOL) !((iA == NULL) && (jA == NULL) && (Aij == NULL));
   if(filldata && maxN > 1 && jA == NULL) {
-    printf("Market Market insufficient array storage specified\n");
+    Rprintf("Market Market insufficient array storage specified\n");
     goto x900;
   }
 
@@ -210,7 +211,7 @@ MYBOOL mmf_read_A(char *filename, int maxM, int maxN, int maxnz,
   /* Handle case where only the lower triangular parts are given */
   if(!mm_is_general(matcode)) {
     if((M != N) || (maxN != maxM) || (2*(*nz) > maxnz)) {
-      printf("Market Market cannot fill in symmetry data\n");
+      Rprintf("Market Market cannot fill in symmetry data\n");
       goto x900;
     }
     ispat = mm_is_skew(matcode);
