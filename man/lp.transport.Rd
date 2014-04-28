@@ -4,7 +4,8 @@
 \description{Interface to lp\_solve linear/integer programming
 system specifically for solving transportation problems}
 \usage{
-lp.transport (cost.mat, direction="min", row.signs, row.rhs, col.signs, col.rhs, presolve=0, compute.sens=0, integers = 1:(nc*nr) )
+lp.transport (cost.mat, direction="min", row.signs, row.rhs, col.signs,
+              col.rhs, presolve=0, compute.sens=0, integers = 1:(nc*nr) )
 }
 \arguments{
 \item{cost.mat}{Matrix of costs; ij-th element is the cost of transporting 

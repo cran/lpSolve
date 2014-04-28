@@ -616,6 +616,9 @@ void LUSOL_free(LUSOLrec *LUSOL)
     unload_BLAS();
   LUSOL_FREE(LUSOL);
 }
+#include <R.h>
+#include <R_ext/Print.h>
+
 
 void LUSOL_report(LUSOLrec *LUSOL, int msglevel, char *format, ...)
 {

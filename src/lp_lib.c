@@ -5323,6 +5323,8 @@ MYBOOL __WINAPI set_BFP(lprec *lp, char *filename)
   return( (MYBOOL) (result == LIB_LOADED));
 }
 
+#include <R.h>
+#include <R_ext/Print.h>
 
 /* External language interface routines */
 /* DON'T MODIFY */

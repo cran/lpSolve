@@ -164,7 +164,7 @@ void blockWriteLREAL(FILE *output, char *label, LREAL *vector, int first, int la
 {
   int i, k = 0;
 
-  fprintf(output, label);
+  fprintf(output, "%s", label);
   fprintf(output, "\n");
   for(i = first; i <= last; i++) {
     fprintf(output, " %18g", vector[i]);
@@ -193,7 +193,7 @@ void blockWriteAMAT(FILE *output, const char *label, lprec* lp, int first, int l
   if(last < 0)
     last = lp->rows;
 
-  fprintf(output, label);
+  fprintf(output, "%s", label);
   fprintf(output, "\n");
 
   if(first == 0) {
@@ -258,7 +258,7 @@ void blockWriteBMAT(FILE *output, const char *label, lprec* lp, int first, int l
   if(last < 0)
     last = lp->rows;
 
-  fprintf(output, label);
+  fprintf(output, "%s", label);
   fprintf(output, "\n");
 
   for(i = first; i <= last; i++) {
