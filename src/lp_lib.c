@@ -178,15 +178,15 @@ STATIC int yieldformessages(lprec *lp)
 
 void __WINAPI set_outputstream(lprec *lp, FILE *stream)
 {
-  if((lp->outstream != NULL) && (lp->outstream != stdout)) {
+  if((lp->outstream != NULL) ) { /* && (lp->outstream != stdout)) { */
     if(lp->streamowned)
       fclose(lp->outstream);
     else
       fflush(lp->outstream);
   }
-  if(stream == NULL)
-    lp->outstream = stdout;
-  else
+/*  if(stream == NULL)
+**    lp->outstream = stdout;
+**  else */
     lp->outstream = stream;
   lp->streamowned = FALSE;
 }
@@ -194,7 +194,7 @@ void __WINAPI set_outputstream(lprec *lp, FILE *stream)
 MYBOOL __WINAPI set_outputfile(lprec *lp, char *filename)
 {
   MYBOOL ok;
-  FILE   *output = stdout;
+  FILE   *output; /* = stdout; */
 
   ok = (MYBOOL) ((filename == NULL) || (*filename == 0) || ((output = fopen(filename,"w")) != NULL));
   if(ok) {
@@ -6222,6 +6222,7 @@ STATIC int row_intstats(lprec *lp, int rownr, int pivcolnr,
 
     /* Get smallest fractional row value */
     ndec = row_decimals(lp, rownr, AUTOMATIC, &intfrac);
+    ndec = ndec + 0; /* So the compiler thinks we used ndec! -- Buttrey */
 
     /* Get OF row starting and ending positions, as well as the first column index */
     if(rownr == 0) {
@@ -6716,7 +6717,7 @@ STATIC MYBOOL is_slackbasis(lprec *lp)
 
 STATIC MYBOOL verify_basis(lprec *lp)
 {
-  int    i, ii, k = 0;
+  int    i, ii; /* , k = 0; */
   MYBOOL result = FALSE;
 if (buttrey_thing > 0)
 {
@@ -6735,7 +6736,7 @@ buttrey_debugfile = fopen ("h:/temp/egaddeath.txt", "w");
             fprintf (buttrey_debugfile, "lp lib: We're inside.\n");
         fflush (buttrey_debugfile);
         }
-      k = i;
+      /* k = i; */
       ii = 0;
       goto Done;
     }

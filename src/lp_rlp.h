@@ -609,12 +609,13 @@ YY_MALLOC_DECL
 /* This used to be an fputs(), but since the string might contain NUL's,
  * we now use fwrite().
  */
-#define ECHO (void) fwrite( lp_yytext, lp_yyleng, 1, lp_yyout )
-#endif
+/* #define ECHO (void) fwrite( lp_yytext, lp_yyleng, 1, lp_yyout )
+** #endif */
 
 /* Gets input and stuffs it into "buf".  number of characters read, or YY_NULL,
  * is returned in "result".
  */
+#endif
 #ifndef YY_INPUT
 #define YY_INPUT(buf,result,max_size) \
 	if ( lp_yy_current_buffer->lp_yy_is_interactive ) \
@@ -696,11 +697,12 @@ YY_DECL
 		if ( ! lp_yy_start )
 			lp_yy_start = 1;	/* first start state */
 
-		if ( ! lp_yyin )
-			lp_yyin = stdin;
+/*		if ( ! lp_yyin )
+**			lp_yyin = stdin;
 
-		if ( ! lp_yyout )
-			lp_yyout = stdout;
+**		if ( ! lp_yyout )
+**			lp_yyout = stdout;
+*/
 
 		if ( ! lp_yy_current_buffer )
 			lp_yy_current_buffer =
@@ -1009,7 +1011,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-ECHO;
+/* ECHO; */
 	YY_BREAK
 			case YY_STATE_EOF(INITIAL):
 			case YY_STATE_EOF(COMMENT):
@@ -1796,7 +1798,7 @@ static void lp_yy_fatal_error( msg )
 char msg[];
 #endif
 	{
-	(void) fprintf( stderr, "%s\n", msg );
+	/* (void) fprintf( stderr, "%s\n", msg ); */
 	exit( YY_EXIT_FAILURE );
 	}
 

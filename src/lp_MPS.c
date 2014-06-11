@@ -1453,7 +1453,7 @@ static int __WINAPI write_lpdata(void *userhandle, char *buf)
 
 MYBOOL MPS_writefile(lprec *lp, int typeMPS, char *filename)
 {
-  FILE *output = stdout;
+  FILE *output; /* = stdout; */
   MYBOOL ok;
 
   ok = ((output = fopen(filename, "w")) != NULL);
@@ -1660,7 +1660,7 @@ MYBOOL MPS_writeBAS(lprec *lp, int typeMPS, char *filename)
   int    ib, in;
   MYBOOL ok;
   char   name1[100], name2[100];
-  FILE   *output = stdout;
+  FILE   *output; /*  = stdout; */
   char * (*MPSname)(char *name);
 
   /* Set name formatter */

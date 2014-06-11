@@ -610,10 +610,6 @@ lp_yyparse(YYPARSE_PARAM_ARG)
 
   int lp_yylen;
 
-#if YYDEBUG != 0
-  if (lp_yydebug)
-    fprintf(stderr, "Starting parse\n");
-#endif
 
   lp_yystate = 0;
   lp_yyerrstatus = 0;
@@ -713,19 +709,11 @@ lp_yynewstate:
       lp_yylsp = lp_yyls + size - 1;
 #endif
 
-#if YYDEBUG != 0
-      if (lp_yydebug)
-	fprintf(stderr, "Stack size increased to %d\n", lp_yystacksize);
-#endif
 
       if (lp_yyssp >= lp_yyss + lp_yystacksize - 1)
 	YYABORT;
     }
 
-#if YYDEBUG != 0
-  if (lp_yydebug)
-    fprintf(stderr, "Entering state %d\n", lp_yystate);
-#endif
 
   goto lp_yybackup;
  lp_yybackup:
@@ -747,10 +735,6 @@ lp_yynewstate:
 
   if (lp_yychar == YYEMPTY)
     {
-#if YYDEBUG != 0
-      if (lp_yydebug)
-	fprintf(stderr, "Reading a token: ");
-#endif
       lp_yychar = YYLEX;
     }
 
@@ -761,27 +745,11 @@ lp_yynewstate:
       lp_yychar1 = 0;
       lp_yychar = YYEOF;		/* Don't call YYLEX any more */
 
-#if YYDEBUG != 0
-      if (lp_yydebug)
-	fprintf(stderr, "Now at end of input.\n");
-#endif
     }
   else
     {
       lp_yychar1 = YYTRANSLATE(lp_yychar);
 
-#if YYDEBUG != 0
-      if (lp_yydebug)
-	{
-	  fprintf (stderr, "Next token is %d (%s", lp_yychar, lp_yytname[lp_yychar1]);
-	  /* Give the individual parser a way to print the precise meaning
-	     of a token, for further debugging info.  */
-#ifdef YYPRINT
-	  YYPRINT (stderr, lp_yychar, lp_yylval);
-#endif
-	  fprintf (stderr, ")\n");
-	}
-#endif
     }
 
   lp_yyn += lp_yychar1;
@@ -812,11 +780,6 @@ lp_yynewstate:
 
   /* Shift the lookahead token.  */
 
-#if YYDEBUG != 0
-  if (lp_yydebug)
-    fprintf(stderr, "Shifting token %d (%s), ", lp_yychar, lp_yytname[lp_yychar1]);
-#endif
-
   /* Discard the token being shifted unless it is eof.  */
   if (lp_yychar != YYEOF)
     lp_yychar = YYEMPTY;
@@ -844,22 +807,6 @@ lp_yyreduce:
   lp_yylen = lp_yyr2[lp_yyn];
   if (lp_yylen > 0)
     lp_yyval = lp_yyvsp[1-lp_yylen]; /* implement default value of the action */
-
-#if YYDEBUG != 0
-  if (lp_yydebug)
-    {
-      int i;
-
-      fprintf (stderr, "Reducing via rule %d (line %d), ",
-	       lp_yyn, lp_yyrline[lp_yyn]);
-
-      /* Print the symbols being reduced, and their result.  */
-      for (i = lp_yyprhs[lp_yyn]; lp_yyrhs[i] > 0; i++)
-	fprintf (stderr, "%s ", lp_yytname[lp_yyrhs[i]]);
-      fprintf (stderr, " -> %s\n", lp_yytname[lp_yyr1[lp_yyn]]);
-    }
-#endif
-
 
   switch (lp_yyn) {
 
@@ -1272,17 +1219,6 @@ case 79:
   lp_yylsp -= lp_yylen;
 #endif
 
-#if YYDEBUG != 0
-  if (lp_yydebug)
-    {
-      short *ssp1 = lp_yyss - 1;
-      fprintf (stderr, "state stack now");
-      while (ssp1 != lp_yyssp)
-	fprintf (stderr, " %d", *++ssp1);
-      fprintf (stderr, "\n");
-    }
-#endif
-
   *++lp_yyvsp = lp_yyval;
 
 #ifdef YYLSP_NEEDED
@@ -1379,11 +1315,6 @@ lp_yyerrlab1:   /* here on error raised explicitly by an action */
       if (lp_yychar == YYEOF)
 	YYABORT;
 
-#if YYDEBUG != 0
-      if (lp_yydebug)
-	fprintf(stderr, "Discarding token %d (%s).\n", lp_yychar, lp_yytname[lp_yychar1]);
-#endif
-
       lp_yychar = YYEMPTY;
     }
 
@@ -1412,17 +1343,6 @@ lp_yyerrpop:   /* pop the current state because it cannot handle the error token
   lp_yylsp--;
 #endif
 
-#if YYDEBUG != 0
-  if (lp_yydebug)
-    {
-      short *ssp1 = lp_yyss - 1;
-      fprintf (stderr, "Error: state stack now");
-      while (ssp1 != lp_yyssp)
-	fprintf (stderr, " %d", *++ssp1);
-      fprintf (stderr, "\n");
-    }
-#endif
-
 lp_yyerrhandle:
 
   lp_yyn = lp_yypact[lp_yystate];
@@ -1447,10 +1367,6 @@ lp_yyerrhandle:
   if (lp_yyn == YYFINAL)
     YYACCEPT;
 
-#if YYDEBUG != 0
-  if (lp_yydebug)
-    fprintf(stderr, "Shifting error token, ");
-#endif
 
   *++lp_yyvsp = lp_yylval;
 #ifdef YYLSP_NEEDED

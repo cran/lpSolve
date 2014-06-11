@@ -68,7 +68,7 @@ An lp object. See \code{\link{lp.object}} for details.
 #   x1 + 2 x2 + 3 x3  <= 9
 # 3 x1 + 2 x2 + 2 x3 <= 15
 #
-f.obj <- c(1, 9, 3)
+f.obj <- c(1, 9, 1)
 f.con <- matrix (c(1, 2, 3, 3, 2, 2), nrow=2, byrow=TRUE)
 f.dir <- c("<=", "<=")
 f.rhs <- c(9, 15)

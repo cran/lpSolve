@@ -74,7 +74,7 @@ void __VACALL report(lprec *lp, int level, char *format, ...)
     }
     if(lp->outstream != NULL) {
       vfprintf(lp->outstream, format, ap);
-      if(lp->outstream != stdout)
+/*    if(lp->outstream != stdout) */
         fflush(lp->outstream);
     }
     va_end(ap);
@@ -108,7 +108,7 @@ STATIC void debug_print(lprec *lp, char *format, ...)
     if (lp == NULL)
     {
       REvprintf( format, ap);
-      fputc('\n', stderr);
+    /*   fputc('\n', stderr); */
     }
     else if(lp->debuginfo != NULL)
     {
@@ -295,7 +295,8 @@ void blockWriteBMAT(FILE *output, const char *label, lprec* lp, int first, int l
    principally for run difference and debugging purposes */
 MYBOOL REPORT_debugdump(lprec *lp, char *filename, MYBOOL livedata)
 {
-  FILE   *output = stdout;
+  /* FILE   *output = stdout; */
+  FILE   *output;
   MYBOOL ok;
 
   ok = (MYBOOL) ((filename == NULL) || ((output = fopen(filename,"w")) != NULL));
@@ -705,7 +706,7 @@ MYBOOL REPORT_mat_mmsave(lprec *lp, char *filename, int *colndx, MYBOOL includeO
   int         n, m, nz, i, j, k, kk;
   MATrec      *mat = lp->matA;
   MM_typecode matcode;
-  FILE        *output = stdout;
+  FILE        *output; /* = stdout; */
   MYBOOL      ok;
   REAL        *acol = NULL;
   int         *nzlist = NULL;

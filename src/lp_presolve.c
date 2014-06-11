@@ -3551,7 +3551,7 @@ STATIC MYBOOL presolve_finalize(presolverec *psdata)
 
 STATIC MYBOOL presolve_debugdump(lprec *lp, presolverec *psdata, char *filename, MYBOOL doappend)
 {
-  FILE   *output = stdout;
+  FILE   *output; /* = stdout; */
   int   size;
   MYBOOL ok;
 

@@ -399,43 +399,44 @@ int mm_write_banner(FILE *f, MM_typecode matcode)
 int mm_write_mtx_crd(char fname[], int M, int N, int nz, int I[], int J[],
         double val[], MM_typecode matcode)
 {
-    FILE *f;
-    int i;
-
-    if (strcmp(fname, "stdout") == 0) 
-        f = stdout;
-    else
-    if ((f = fopen(fname, "w")) == NULL)
-        return MM_COULD_NOT_WRITE_FILE;
-    
-    /* print banner followed by typecode */
-    fprintf(f, "%s ", MatrixMarketBanner);
-    fprintf(f, "%s\n", mm_typecode_to_str(matcode));
-
-    /* print matrix sizes and nonzeros */
-    fprintf(f, "%d %d %d\n", M, N, nz);
-
-    /* print values */
-    if (mm_is_pattern(matcode))
-        for (i=0; i<nz; i++)
-            fprintf(f, "%d %d\n", I[i], J[i]);
-    else
-    if (mm_is_real(matcode))
-        for (i=0; i<nz; i++)
-            fprintf(f, "%d %d %20.16g\n", I[i], J[i], val[i]);
-    else
-    if (mm_is_complex(matcode))
-        for (i=0; i<nz; i++)
-            fprintf(f, "%d %d %20.16g %20.16g\n", I[i], J[i], val[2*i], 
-                        val[2*i+1]);
-    else
-    {
-        if (f != stdout) fclose(f);
-        return MM_UNSUPPORTED_TYPE;
-    }
-
-    if (f !=stdout) fclose(f);
-
+/*
+**  FILE *f;
+**  int i;
+**
+**  if (strcmp(fname, "stdout") == 0) 
+**      f = stdout;
+**  else
+**  if ((f = fopen(fname, "w")) == NULL)
+**      return MM_COULD_NOT_WRITE_FILE;
+**  
+**  ** print banner followed by typecode **
+**  fprintf(f, "%s ", MatrixMarketBanner);
+**  fprintf(f, "%s\n", mm_typecode_to_str(matcode));
+**
+**  ** print matrix sizes and nonzeros **
+**  fprintf(f, "%d %d %d\n", M, N, nz);
+**
+**  ** print values **
+**  if (mm_is_pattern(matcode))
+**      for (i=0; i<nz; i++)
+**          fprintf(f, "%d %d\n", I[i], J[i]);
+**  else
+**  if (mm_is_real(matcode))
+**      for (i=0; i<nz; i++)
+**          fprintf(f, "%d %d %20.16g\n", I[i], J[i], val[i]);
+**  else
+**  if (mm_is_complex(matcode))
+**      for (i=0; i<nz; i++)
+**          fprintf(f, "%d %d %20.16g %20.16g\n", I[i], J[i], val[2*i], 
+**                      val[2*i+1]);
+**  else
+**  {
+**      if (f != stdout) fclose(f);
+**      return MM_UNSUPPORTED_TYPE;
+**  }
+**
+**  if (f !=stdout) fclose(f);
+*/
     return 0;
 }
     

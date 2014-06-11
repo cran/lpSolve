@@ -181,14 +181,14 @@ STATIC MYBOOL inc_mat_space(MATrec *mat, int mindelta)
 
 STATIC MYBOOL inc_matrow_space(MATrec *mat, int deltarows)
 {
-  int    rowsum, oldrowsalloc;
+  int    rowsum; /* , oldrowsalloc; */
   MYBOOL status = TRUE;
 
   /* Adjust lp row structures */
   if(mat->rows+deltarows >= mat->rows_alloc) {
 
     /* Update memory allocation and sizes */
-    oldrowsalloc = mat->rows_alloc;
+    /* oldrowsalloc = mat->rows_alloc; */
     deltarows = DELTA_SIZE(deltarows, mat->rows);
     SETMAX(deltarows, DELTAROWALLOC);
     mat->rows_alloc += deltarows;
@@ -961,7 +961,7 @@ STATIC int mat_nz_unused(MATrec *mat)
 
 STATIC MYBOOL mat_setrow(MATrec *mat, int rowno, int count, REAL *row, int *colno, MYBOOL doscale, MYBOOL checkrowmode)
 {
-  int    k, kk, i, ii, j, jj = 0, jj_j, elmnr, orignr, newnr, firstcol, rownr, colnr;
+  int    kk, i, ii, j, jj = 0, jj_j, elmnr, orignr, newnr, firstcol, rownr, colnr;
   MYBOOL *addto = NULL, isA, isNZ;
   REAL   value, saved = 0;
   lprec  *lp = mat->lp;
@@ -1049,7 +1049,7 @@ STATIC MYBOOL mat_setrow(MATrec *mat, int rowno, int count, REAL *row, int *coln
   /* Pack initial entries if existing row data has a lower column
      start index than the first index of the new vector */
   orignr = mat_nonzeros(mat);
-  k = newnr - mat_rowlength(mat, rowno);
+  /* k = newnr - mat_rowlength(mat, rowno); */
   kk = 0;
   if(rowno == 0)
     ii = 0;
@@ -2647,14 +2647,8 @@ STATIC MYBOOL __WINAPI invert(lprec *lp, MYBOOL shiftbounds, MYBOOL final)
   lp->bfp_finishfactorization(lp);
 
   /* Recompute the RHS ( Ref. lp_solve inverse logic and Chvatal p. 121 ) */
-#ifdef DebugInv
-  blockWriteLREAL(stdout, "RHS-values pre invert", lp->rhs, 0, lp->rows);
-#endif
   recompute_solution(lp, shiftbounds);
   restartPricer(lp, AUTOMATIC);
-#ifdef DebugInv
-  blockWriteLREAL(stdout, "RHS-values post invert", lp->rhs, 0, lp->rows);
-#endif
 
 Cleanup:
   /* Check for numerical instability indicated by frequent refactorizations */
@@ -2944,7 +2938,7 @@ STATIC int prod_Ax(lprec *lp, int *coltarget, REAL *input, int *nzinput,
                               REAL *output, int *nzoutput, int roundmode)
 /* prod_Ax is only used in fimprove; note that it is NOT VALIDATED/verified as of 20030801 - KE */
 {
-  int      j, colnr, ib, ie, vb, ve;
+  int      j, colnr, ib, ie, vb; /*, ve; */
   MYBOOL   localset, localnz = FALSE, isRC;
   MATrec   *mat = lp->matA;
   REAL     sdp;
@@ -2974,7 +2968,7 @@ STATIC int prod_Ax(lprec *lp, int *coltarget, REAL *input, int *nzinput,
 
   /* Scan the columns */
   vb = 1;
-  ve = coltarget[0];
+  /* ve = coltarget[0]; */
   for(vb = 1; vb <= coltarget[0]; vb++) {
     colnr = coltarget[vb];
     j = lp->is_basic[colnr];

@@ -617,11 +617,11 @@ void print_L0(LUSOLrec *LUSOL)
     }
   }
 
-  for(I = 1; I <= LUSOL->n; I++) {
-    for(J = 1; J <= LUSOL->m; J++)
-      fprintf(stdout, "%10g", denseL0[(LUSOL->n+1)*(J-1) + I]);
-    fprintf(stdout, "\n");
-  }
+/*  for(I = 1; I <= LUSOL->n; I++) {
+**  for(J = 1; J <= LUSOL->m; J++)
+**    fprintf(stdout, "%10g", denseL0[(LUSOL->n+1)*(J-1) + I]);
+**  fprintf(stdout, "\n");
+**} */
   LUSOL_FREE(denseL0);
 }
 

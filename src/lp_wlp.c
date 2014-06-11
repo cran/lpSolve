@@ -310,7 +310,7 @@ static int __WINAPI write_lpdata(void *userhandle, char *buf)
 
 MYBOOL LP_writefile(lprec *lp, char *filename)
 {
-  FILE *output = stdout;
+  FILE *output; /* = stdout; */
   MYBOOL ok;
 
   ok = ((output = fopen(filename, "w")) != NULL);
