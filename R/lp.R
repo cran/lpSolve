@@ -113,7 +113,7 @@ lp <- function(direction = "min", objective.in, const.mat, const.dir, const.rhs,
             if (ncol (dense.const) != 3)
                 stop ("Dense constraints must be in three columns.")
             dimnames(dense.const) <- list (NULL, c("Const", "Var", "Value"))
-            dense.const <- dense.const[order(dense.const[,"Const"]),]
+            dense.const <- dense.const[order(dense.const[,"Const"]),,drop=FALSE]
             const.indices <- unique (dense.const[,"Const"])
             if (length(const.indices) != max (const.indices))
 		stop ("Error in constraint numbering")
@@ -126,7 +126,7 @@ lp <- function(direction = "min", objective.in, const.mat, const.dir, const.rhs,
 	#
             dense.ctr <- table (dense.const[,"Const"])
             names(dense.ctr) <- NULL
-            dense.const <- dense.const[,c("Var", "Value")]
+            dense.const <- dense.const[,c("Var", "Value"), drop=FALSE]
             dense.const.nrow <- nrow (dense.const)
             use.dense <- TRUE
 	}}
