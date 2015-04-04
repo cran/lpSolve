@@ -1801,7 +1801,7 @@ char msg[];
 #endif
 	{
 	/* (void) fprintf( stderr, "%s\n", msg ); */
-	error( YY_EXIT_FAILURE ); /* exit( YY_EXIT_FAILURE ); */
+	lex_fatal_error (msg); /* exit( YY_EXIT_FAILURE ); */
 	}
 
 

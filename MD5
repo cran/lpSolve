@@ -1,4 +1,4 @@
-cee68638fcb819436ab42750164c22d7 *DESCRIPTION
+df2d34e1a44fdfc9b3a5c5948cef47e4 *DESCRIPTION
 5d954745be287207485c9af3411e4a9d *NAMESPACE
 f56ee882e60cbf4d840251e2e58fe77d *R/lp.R
 89b2e3700cc47dcb8fb39f951603e008 *R/lp.assign.R
@@ -58,13 +58,13 @@ dc50c729e494a1e9c696a583fc8071b9 *src/lp_pricePSE.h
 155eb77552c988866e08d52660566212 *src/lp_report.c
 c63130e91e32ad6ccb07ed74b858b2f6 *src/lp_report.h
 8fdde282601737509674313d827b903c *src/lp_rlp.c
-64ca25d591d8f40e7506a6e96703a4d8 *src/lp_rlp.h
+a5994e2222ba4bd9164aa079e9f9cda2 *src/lp_rlp.h
 c0d6d17b778a6abddce060ae7c4eb485 *src/lp_scale.c
 58d5ec0d2d218782a74448fc2c2d49cf *src/lp_scale.h
 695799aa902e816047d86d070d75724d *src/lp_simplex.c
 15a71c4bc5331ff6006d2ab46e8ad5dd *src/lp_simplex.h
 da47556046beeb09b31c37fc78da8b32 *src/lp_types.h
-18e8dc5645222a7612ea033e381d98ef *src/lp_utils.c
+312b52b479860d4884cc3dedc9914da7 *src/lp_utils.c
 2f4334f740e62ab78cb7c30a35f65a00 *src/lp_utils.h
 f1c11764f310c464d1d939445a549830 *src/lp_wlp.c
 e38ffb7e5dbfb1aa5d6589ac0e6be58b *src/lp_wlp.h

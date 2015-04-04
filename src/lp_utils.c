@@ -11,6 +11,7 @@
 # include "lp_fortify.h"
 #endif
 
+#include "R.h"
 
 /*
     Miscellaneous utilities as implemented for lp_solve v5.0+
@@ -617,10 +618,16 @@ STATIC REAL rand_uniform(lprec *lp, REAL range)
   static MYBOOL randomized = FALSE;
 
   if(!randomized) {
-    srand((unsigned) time( NULL ));
+    GetRNGstate();
+/* Original code:   srand((unsigned) time( NULL )); */
     randomized = TRUE;
   }
-  range *= (REAL) rand() / (REAL) RAND_MAX;
+/* We need to call Put when we're done. So...every time? */
+
+  range *= (REAL) unif_rand();
+  PutRNGstate();
+
+/* Original code: range *= (REAL) rand() / (REAL) RAND_MAX; */
   return( range );
 }
 
