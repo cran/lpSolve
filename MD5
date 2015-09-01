@@ -1,4 +1,4 @@
-df2d34e1a44fdfc9b3a5c5948cef47e4 *DESCRIPTION
+c76eb0eee183f7a796edc333d87662b0 *DESCRIPTION
 5d954745be287207485c9af3411e4a9d *NAMESPACE
 f56ee882e60cbf4d840251e2e58fe77d *R/lp.R
 89b2e3700cc47dcb8fb39f951603e008 *R/lp.assign.R
@@ -42,7 +42,7 @@ a38903d6d76b4facd163017c55f89389 *src/lp_SOS.c
 91c43ad6fde554bb8bfa84b4d2de50d9 *src/lp_crash.h
 eb42ea6b62c3173610f3ffd652719e24 *src/lp_explicit.h
 1175c90bc8cc00005069b734eacee99c *src/lp_fortify.h
-def5e9fd6f0d9aedbfd9254898c7b4a7 *src/lp_lib.c
+da4ee15a5464e9e0f180eb5a501848de *src/lp_lib.c
 f61de993e64612611a9552db3d3d682c *src/lp_lib.h
 06ea869656ed995f314a52fa00c047a6 *src/lp_matrix.c
 0e0411fc13742423c3ad9daf4898a207 *src/lp_matrix.h
@@ -73,7 +73,7 @@ ffd442a64078b2bba9f5b874dfbae618 *src/lpslink56.c
 7ef44c14a40fe999edd2e437bec993fd *src/lpsolve.h
 d23d55a36b1655d9cff65d5a77947c0b *src/lusol.c
 52b8d1269fab176c6c81632c544de26d *src/lusol.h
-6a602d2cb5c8b283d9a5a2aab33d20cb *src/lusol1.h
+25dc28dcc7369facbd0286095980b512 *src/lusol1.h
 a5801e5989ac98e0b250e0eee8c2a41c *src/lusol2.h
 a93d1dfb72e8c130df6c450137e0ea0d *src/lusol6a.h
 e92bf5c4a3f3345bf38c2d06fa96b14b *src/lusol6l0.h
@@ -84,8 +84,8 @@ ad1867767ee064effa32ea9e880fe632 *src/lusolio.c
 3e67bb130740b63befbb2c6ed01989b8 *src/lusolio.h
 dc1f6087c484dddc0df906a30ef095da *src/mmio.c
 7ff75e953e30ec3c26bffce310809500 *src/mmio.h
-bd88fee256b65389172899150a721fda *src/myblas.c
-1d0351b2f67a6be7c4be9f49e73204aa *src/myblas.h
+fa91f69df7c3faaa59d936601b5e1b91 *src/myblas.c
+c10c47b46f06bfe4b5b076f4fd8fae1e *src/myblas.h
 e465febb35e71840ba08c5ecf621e1e7 *src/sparselib.c
 4bae4e6a2367d3b9ef07b7dae5e608ba *src/sparselib.h
 ca9689ad85eac09f9bdb3f3db52222d0 *src/ufortify.h

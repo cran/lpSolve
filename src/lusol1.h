@@ -62,7 +62,7 @@ void LU1DCP(LUSOLrec *LUSOL, REAL DA[], int LDA, int M, int N, REAL SMALL,
     JLAST = LAST;
     for(J = K; J <= JLAST; J++) {
 x10:
-      L = idamax(LENCOL,DA+DAPOS(K,J)-LUSOL_ARRAYOFFSET,1)+K-1;
+      L = idamaxlpsolve(LENCOL,DA+DAPOS(K,J)-LUSOL_ARRAYOFFSET,1)+K-1;
       AJMAX = fabs(DA[DAPOS(L,J)]);
       if(AJMAX<=SMALL) {
 /*     ========================================================
@@ -248,7 +248,7 @@ x10:
   KP1 = K+1;
   LENCOL = (M-K)+1;
 /*      Find l, the pivot row. */
-  L = (idamax(LENCOL,DA+DAPOS(K,K)-LUSOL_ARRAYOFFSET,1)+K)-1;
+  L = (idamaxlpsolve(LENCOL,DA+DAPOS(K,K)-LUSOL_ARRAYOFFSET,1)+K)-1;
   IPVT[K] = L;
   if(fabs(DA[DAPOS(L,K)])<=SMALL) {
 /*         ===============================================================
@@ -1577,7 +1577,7 @@ void LU1MXC(LUSOLrec *LUSOL, int K1, int K2, int IX[])
 /*      LUSOL->a[LC] = ZERO;  Removal suggested by Yin Zhang to avoid overwriting next column when current is empty */
       ;
     else {
-      L = idamax(LUSOL->lenc[J], LUSOL->a + LC - LUSOL_ARRAYOFFSET,1) + LC - 1;
+      L = idamaxlpsolve(LUSOL->lenc[J], LUSOL->a + LC - LUSOL_ARRAYOFFSET,1) + LC - 1;
       if(L>LC) {
         AMAX = LUSOL->a[L];
         LUSOL->a[L] = LUSOL->a[LC];

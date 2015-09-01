@@ -82,8 +82,8 @@ void dcopy ( int n, REAL *dx, int incx, REAL *dy, int incy );
 void daxpy ( int n, REAL da,  REAL *dx, int incx,   REAL *dy, int incy );
 void dswap ( int n, REAL *dx, int incx, REAL *dy, int incy );
 REAL ddot  ( int n, REAL *dx, int incx, REAL *dy, int incy );
-int  idamax( int n, REAL *x,  int is );
-int  idamin( int n, REAL *x,  int is );
+int  idamaxlpsolve( int n, REAL *x,  int is );
+int  idaminlpsolve( int n, REAL *x,  int is );
 void dload ( int n, REAL da,  REAL *dx, int incx );
 REAL dnormi( int n, REAL *x );
 

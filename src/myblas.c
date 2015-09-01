@@ -629,13 +629,13 @@ x40:
 }
 
 /* ************************************************************************ */
-int idamax( int n, REAL *x, int is )
+int idamaxlpsolve( int n, REAL *x, int is )
 {
   x++;
   return ( BLAS_idamax( &n, x, &is ) );
 }
 
-int idamin( int n, REAL *x, int is )
+int idaminlpsolve( int n, REAL *x, int is )
 {
   x++;
   return ( BLAS_idamin( &n, x, &is ) );
