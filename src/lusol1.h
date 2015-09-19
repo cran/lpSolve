@@ -164,7 +164,7 @@ x10:
         Do row elimination with column indexing.
        =========================================================== */
       T = -ONE/DA[DAPOS(K,K)];
-      dscal(M-K,T,DA+DAPOS(KP1,K)-LUSOL_ARRAYOFFSET,1);
+      dscallpsolve(M-K,T,DA+DAPOS(KP1,K)-LUSOL_ARRAYOFFSET,1);
       for(J = KP1; J <= LAST; J++) {
         IDA1 = DAPOS(IMAX,J);
         T = DA[IDA1];
@@ -173,7 +173,7 @@ x10:
           DA[IDA1] = DA[IDA2];
           DA[IDA2] = T;
         }
-        daxpy(M-K,T,DA+DAPOS(KP1,K)-LUSOL_ARRAYOFFSET,1,
+        daxpylpsolve(M-K,T,DA+DAPOS(KP1,K)-LUSOL_ARRAYOFFSET,1,
                     DA+DAPOS(KP1,J)-LUSOL_ARRAYOFFSET,1);
       }
     }
@@ -313,7 +313,7 @@ x10:
            Do row elimination with column indexing.
            =============================================================== */
     T = -ONE/DA[DAPOS(K,K)];
-    dscal(M-K,T,DA+DAPOS(KP1,K)-LUSOL_ARRAYOFFSET,1);
+    dscallpsolve(M-K,T,DA+DAPOS(KP1,K)-LUSOL_ARRAYOFFSET,1);
     for(J = KP1; J <= LAST; J++) {
       IDA1 = DAPOS(L,J);
       T = DA[IDA1];
@@ -322,7 +322,7 @@ x10:
         DA[IDA1] = DA[IDA2];
         DA[IDA2] = T;
       }
-      daxpy(M-K,T,DA+DAPOS(KP1,K)-LUSOL_ARRAYOFFSET,1,
+      daxpylpsolve(M-K,T,DA+DAPOS(KP1,K)-LUSOL_ARRAYOFFSET,1,
                   DA+DAPOS(KP1,J)-LUSOL_ARRAYOFFSET,1);
     }
     K++;
@@ -1716,7 +1716,7 @@ void LU1FUL(LUSOLrec *LUSOL, int LEND, int LU1, MYBOOL TPP,
 #ifdef LUSOLFastCopy
   MEMCOPY(LUSOL->a+1,D+1,LEND);
 #else
-  dcopy(LEND,D,1,LUSOL->a,1);
+  dcopylpsolve(LEND,D,1,LUSOL->a,1);
 #endif
 #ifdef ClassicdiagU
   LUSOL->diagU = LUSOL->a + (LUSOL->lena-LUSOL->n);

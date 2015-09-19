@@ -137,7 +137,7 @@ MYBOOL unload_BLAS(void)
 /* ************************************************************************ */
 /* Now define the unoptimized local BLAS functions                          */
 /* ************************************************************************ */
-void daxpy( int n, REAL da, REAL *dx, int incx, REAL *dy, int incy)
+void daxpylpsolve( int n, REAL da, REAL *dx, int incx, REAL *dy, int incy)
 {
   dx++;
   dy++;
@@ -214,7 +214,7 @@ x40:
 
 
 /* ************************************************************************ */
-void dcopy( int n, REAL *dx, int incx, REAL *dy, int incy)
+void dcopylpsolve( int n, REAL *dx, int incx, REAL *dy, int incy)
 {
   dx++;
   dy++;
@@ -297,7 +297,7 @@ x40:
 
 /* ************************************************************************ */
 
-void dscal (int n, REAL da, REAL *dx, int incx)
+void dscallpsolve (int n, REAL da, REAL *dx, int incx)
 {
   dx++;
   BLAS_dscal (&n, &da, dx, &incx);
@@ -379,7 +379,7 @@ x40:
 
 /* ************************************************************************ */
 
-REAL ddot(int n, REAL *dx, int incx, REAL *dy, int incy)
+REAL ddotlpsolve(int n, REAL *dx, int incx, REAL *dy, int incy)
 {
   dx++;
   dy++;
@@ -461,7 +461,7 @@ x60:
 
 /* ************************************************************************ */
 
-void dswap( int n, REAL *dx, int incx, REAL *dy, int incy )
+void dswaplpsolve( int n, REAL *dx, int incx, REAL *dy, int incy )
 {
   dx++;
   dy++;

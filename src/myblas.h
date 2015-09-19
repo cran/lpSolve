@@ -77,11 +77,11 @@ MYBOOL unload_BLAS(void);
 /* ************************************************************************ */
 /* User-callable BLAS definitions (C base 1)                                */
 /* ************************************************************************ */
-void dscal ( int n, REAL da,  REAL *dx, int incx );
-void dcopy ( int n, REAL *dx, int incx, REAL *dy, int incy );
-void daxpy ( int n, REAL da,  REAL *dx, int incx,   REAL *dy, int incy );
-void dswap ( int n, REAL *dx, int incx, REAL *dy, int incy );
-REAL ddot  ( int n, REAL *dx, int incx, REAL *dy, int incy );
+void dscallpsolve ( int n, REAL da,  REAL *dx, int incx );
+void dcopylpsolve ( int n, REAL *dx, int incx, REAL *dy, int incy );
+void daxpylpsolve ( int n, REAL da,  REAL *dx, int incx,   REAL *dy, int incy );
+void dswaplpsolve ( int n, REAL *dx, int incx, REAL *dy, int incy );
+REAL ddotlpsolve  ( int n, REAL *dx, int incx, REAL *dy, int incy );
 int  idamaxlpsolve( int n, REAL *x,  int is );
 int  idaminlpsolve( int n, REAL *x,  int is );
 void dload ( int n, REAL da,  REAL *dx, int incx );
