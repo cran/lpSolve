@@ -1,4 +1,4 @@
-68e77d284326a95417f6ba2319ec3d8a *DESCRIPTION
+82ca7dae00937c737bb7d669ba37d89a *DESCRIPTION
 5d954745be287207485c9af3411e4a9d *NAMESPACE
 f56ee882e60cbf4d840251e2e58fe77d *R/lp.R
 89b2e3700cc47dcb8fb39f951603e008 *R/lp.assign.R
@@ -24,6 +24,7 @@ e5e92baa016f12853b6236ceef6422cc *src/hbio.c
 9640c6cfa3574729cec66868a7063c50 *src/hbio.h
 7ed886f0f1677ca7141e80cb1151129f *src/ini.c
 4504a63202117a0f2c5a94345094ef39 *src/ini.h
+69e9a50b1495e56306745c9d5c908320 *src/init.c
 385f8a752e28d168a462ff199e8a626c *src/isfixedvar.c
 ec1603dafa740c89a5c13d30662e96bf *src/lp_BFP.h
 6d387ddea7e501c9f45ac8862b10d630 *src/lp_BFP1.h
@@ -34,7 +35,7 @@ ce0a0d53e631a97b88fadc584331913c *src/lp_Hash.h
 fa869ca21a3fbb48dbf789ad6cb63a51 *src/lp_LUSOL.h
 5d59a4b965236021be19b4f484a93db8 *src/lp_MDO.c
 07bc5ba751db2629a38b7932cc70cbe4 *src/lp_MDO.h
-b1f01fa37acfc3eb3f5da2d879c28eac *src/lp_MPS.c
+c43203bdb736079fa2f3bf02cdf6b0e2 *src/lp_MPS.c
 7871ebb358485f8e8c3ef9443980d497 *src/lp_MPS.h
 a38903d6d76b4facd163017c55f89389 *src/lp_SOS.c
 70c13990a39ffce5c0222bf58ea8d0f3 *src/lp_SOS.h
@@ -86,7 +87,7 @@ dc1f6087c484dddc0df906a30ef095da *src/mmio.c
 7ff75e953e30ec3c26bffce310809500 *src/mmio.h
 7d7a35fefee657e82631e36573f62e97 *src/myblas.c
 c8a3b2f20143aae3f8caec9d28055bd2 *src/myblas.h
-e465febb35e71840ba08c5ecf621e1e7 *src/sparselib.c
+b08069fb86201ded0b9dcb009c209d12 *src/sparselib.c
 4bae4e6a2367d3b9ef07b7dae5e608ba *src/sparselib.h
 ca9689ad85eac09f9bdb3f3db52222d0 *src/ufortify.h
 34e3ce9f30d0f6d5f6e1e30f4702fcba *src/yacc_read.c
