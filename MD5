@@ -1,4 +1,4 @@
-e9cef544439bdce30179f1a4a8eb5433 *DESCRIPTION
+edc58b0d31bd9100b8ddbf69cfb7a486 *DESCRIPTION
 5d954745be287207485c9af3411e4a9d *NAMESPACE
 f56ee882e60cbf4d840251e2e58fe77d *R/lp.R
 89b2e3700cc47dcb8fb39f951603e008 *R/lp.assign.R
@@ -20,7 +20,7 @@ c2ab53abec8229377522a31738ba7b10 *src/Makevars.win
 d411f086bd6e138a7c1b00a71c7362b8 *src/commonlib.h
 6bafa998341646f528777d87971d79f8 *src/declare.h
 0c7ea81c7229f9afe1b4d6708a2c9b5d *src/fortify.h
-e5e92baa016f12853b6236ceef6422cc *src/hbio.c
+e72323322ac76c95b510c10fc46d86c8 *src/hbio.c
 9640c6cfa3574729cec66868a7063c50 *src/hbio.h
 7ed886f0f1677ca7141e80cb1151129f *src/ini.c
 4504a63202117a0f2c5a94345094ef39 *src/ini.h
@@ -83,7 +83,7 @@ eb600f9e480a8cb363ae81901ad4be32 *src/lusol6u.h
 46a3891578edc8cd114808cf564699f6 *src/lusol8a.h
 ad1867767ee064effa32ea9e880fe632 *src/lusolio.c
 3e67bb130740b63befbb2c6ed01989b8 *src/lusolio.h
-dc1f6087c484dddc0df906a30ef095da *src/mmio.c
+6cd4b1bf57863ac7e3b6035a8c0c71fe *src/mmio.c
 7ff75e953e30ec3c26bffce310809500 *src/mmio.h
 7d7a35fefee657e82631e36573f62e97 *src/myblas.c
 c8a3b2f20143aae3f8caec9d28055bd2 *src/myblas.h
