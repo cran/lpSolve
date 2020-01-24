@@ -1,4 +1,4 @@
-edc58b0d31bd9100b8ddbf69cfb7a486 *DESCRIPTION
+e5ccde7c8ded7b21f43ed96cc3fc4167 *DESCRIPTION
 5d954745be287207485c9af3411e4a9d *NAMESPACE
 f56ee882e60cbf4d840251e2e58fe77d *R/lp.R
 89b2e3700cc47dcb8fb39f951603e008 *R/lp.assign.R
@@ -90,5 +90,5 @@ c8a3b2f20143aae3f8caec9d28055bd2 *src/myblas.h
 b08069fb86201ded0b9dcb009c209d12 *src/sparselib.c
 4bae4e6a2367d3b9ef07b7dae5e608ba *src/sparselib.h
 ca9689ad85eac09f9bdb3f3db52222d0 *src/ufortify.h
-34e3ce9f30d0f6d5f6e1e30f4702fcba *src/yacc_read.c
+192b474aa9d52e34585d6a7929d0fa90 *src/yacc_read.c
 6f68b3546f73d4a8e71632bb4e2b6950 *src/yacc_read.h

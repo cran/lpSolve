@@ -1043,6 +1043,7 @@ lprec *yacc_read(lprec *lp, int verbose, char *lp_name, int *_lineno, int (*pars
   REAL *orig_upbo;
   int stat = -1;
   lprec *lp0 = lp;
+  REAL *trash = 0;
 
   lineno = _lineno;
   title = lp_name;
@@ -1090,7 +1091,9 @@ lprec *yacc_read(lprec *lp, int verbose, char *lp_name, int *_lineno, int (*pars
 	if(Rows) {
 	  int row;
 
-	  MALLOCCPY(orig_upbo, lp->orig_upbo, 1 + Rows, REAL);
+          /* gcc 9 warns if we don't assign the value, and use the var :/ */
+	  trash = MALLOCCPY(orig_upbo, lp->orig_upbo, 1 + Rows, REAL);
+          (void) trash;
 	  for(row = 1; row <= Rows; row++)
 	    set_constr_type(lp, row, relat[row]);
 
