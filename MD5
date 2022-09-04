@@ -1,4 +1,4 @@
-e5ccde7c8ded7b21f43ed96cc3fc4167 *DESCRIPTION
+aca665c6ba80868f9f676d90ef7daa4a *DESCRIPTION
 5d954745be287207485c9af3411e4a9d *NAMESPACE
 f56ee882e60cbf4d840251e2e58fe77d *R/lp.R
 89b2e3700cc47dcb8fb39f951603e008 *R/lp.assign.R
@@ -6,10 +6,10 @@ f56ee882e60cbf4d840251e2e58fe77d *R/lp.R
 1b08b692aa9466144a38a6610140141d *R/make.q8.R
 e8c949571124717686a90610235a4e01 *R/print.lp.R
 82d9d64c4e3e654e990c97ab7e4a599e *R/zzz.R
-7f2ba76876e3bbf0d2bda0674b69cdac *man/lp.Rd
-065818c71698c93cb34b0c935a6dbfac *man/lp.assign.Rd
+fd90b756ad9ba63b0a0a61d313cacacc *man/lp.Rd
+495aa3d5e82dd181e4c6c51b4886d983 *man/lp.assign.Rd
 06c29ffbfa3881831f21cb49ac4e0761 *man/lp.object.Rd
-6db2cc71f6207421d511cc31b5877dfd *man/lp.transport.Rd
+d037a6837540cf8e544b484f8e00a830 *man/lp.transport.Rd
 cae07d4610fee186d872be8b72b4a3a4 *man/make.q8.Rd
 a002ef080a26026bc3c5f043b9b036c0 *man/print.lp.Rd
 50b1d9e03d07b9e0c2181f6b290ae5e3 *src/Makevars
@@ -50,7 +50,7 @@ f61de993e64612611a9552db3d3d682c *src/lp_lib.h
 d6ef4f9cedfb0a8b759d0a27acaff4d3 *src/lp_mipbb.c
 6a9e5268c49558066d7c1e6d513a030b *src/lp_mipbb.h
 c3faa18da9f7d8217a869724d51a4b86 *src/lp_params.c
-de88a374ea364907d29685dbad294a3c *src/lp_presolve.c
+2da62814a94848164b4519c2090f59ce *src/lp_presolve.c
 94b37b4e5490ec5bfd9a7878a3757cb8 *src/lp_presolve.h
 19e0dbc4e1bfed660a66d53ef1386c43 *src/lp_price.c
 dc0064126161d25e11fca8b5e1157ed0 *src/lp_price.h
