@@ -1,4 +1,4 @@
-aca665c6ba80868f9f676d90ef7daa4a *DESCRIPTION
+d75bb601118d4eda8d4416d4f7173357 *DESCRIPTION
 5d954745be287207485c9af3411e4a9d *NAMESPACE
 f56ee882e60cbf4d840251e2e58fe77d *R/lp.R
 89b2e3700cc47dcb8fb39f951603e008 *R/lp.assign.R
@@ -6,7 +6,7 @@ f56ee882e60cbf4d840251e2e58fe77d *R/lp.R
 1b08b692aa9466144a38a6610140141d *R/make.q8.R
 e8c949571124717686a90610235a4e01 *R/print.lp.R
 82d9d64c4e3e654e990c97ab7e4a599e *R/zzz.R
-fd90b756ad9ba63b0a0a61d313cacacc *man/lp.Rd
+d08687f3abe46995fbad5f09f830580d *man/lp.Rd
 495aa3d5e82dd181e4c6c51b4886d983 *man/lp.assign.Rd
 06c29ffbfa3881831f21cb49ac4e0761 *man/lp.object.Rd
 d037a6837540cf8e544b484f8e00a830 *man/lp.transport.Rd
@@ -45,7 +45,7 @@ eb42ea6b62c3173610f3ffd652719e24 *src/lp_explicit.h
 1175c90bc8cc00005069b734eacee99c *src/lp_fortify.h
 da4ee15a5464e9e0f180eb5a501848de *src/lp_lib.c
 f61de993e64612611a9552db3d3d682c *src/lp_lib.h
-06ea869656ed995f314a52fa00c047a6 *src/lp_matrix.c
+670b7b1092aa5b134f8e7c22e1952c2b *src/lp_matrix.c
 0e0411fc13742423c3ad9daf4898a207 *src/lp_matrix.h
 d6ef4f9cedfb0a8b759d0a27acaff4d3 *src/lp_mipbb.c
 6a9e5268c49558066d7c1e6d513a030b *src/lp_mipbb.h
@@ -58,8 +58,8 @@ dc0064126161d25e11fca8b5e1157ed0 *src/lp_price.h
 dc50c729e494a1e9c696a583fc8071b9 *src/lp_pricePSE.h
 155eb77552c988866e08d52660566212 *src/lp_report.c
 c63130e91e32ad6ccb07ed74b858b2f6 *src/lp_report.h
-8fdde282601737509674313d827b903c *src/lp_rlp.c
-a5994e2222ba4bd9164aa079e9f9cda2 *src/lp_rlp.h
+88b2ecabd82d3fae13c71d3bd5e8d913 *src/lp_rlp.c
+c02fa3e4c7d0ee6205084dc503bb20a2 *src/lp_rlp.h
 c0d6d17b778a6abddce060ae7c4eb485 *src/lp_scale.c
 58d5ec0d2d218782a74448fc2c2d49cf *src/lp_scale.h
 695799aa902e816047d86d070d75724d *src/lp_simplex.c
@@ -90,5 +90,5 @@ c8a3b2f20143aae3f8caec9d28055bd2 *src/myblas.h
 b08069fb86201ded0b9dcb009c209d12 *src/sparselib.c
 4bae4e6a2367d3b9ef07b7dae5e608ba *src/sparselib.h
 ca9689ad85eac09f9bdb3f3db52222d0 *src/ufortify.h
-192b474aa9d52e34585d6a7929d0fa90 *src/yacc_read.c
+ff21166a7804fe0c8aba40dce2991972 *src/yacc_read.c
 6f68b3546f73d4a8e71632bb4e2b6950 *src/yacc_read.h
