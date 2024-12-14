@@ -1,6 +1,6 @@
-dddf287142149c10f0074ae25ad9536b *DESCRIPTION
+f892cebac18a633f18b703bd143842ec *DESCRIPTION
 5d954745be287207485c9af3411e4a9d *NAMESPACE
-161ff091a164a0f453f0f785e157eed7 *NEWS.md
+4165c55b89014e8daff971d543ea36b4 *NEWS.md
 c3c52167c5e85957227571cad076ff4f *R/lp.R
 89b2e3700cc47dcb8fb39f951603e008 *R/lp.assign.R
 693f4392cf60f9cf8b89ffca74dc7126 *R/lp.transport.R
@@ -44,7 +44,7 @@ a38903d6d76b4facd163017c55f89389 *src/lp_SOS.c
 91c43ad6fde554bb8bfa84b4d2de50d9 *src/lp_crash.h
 eb42ea6b62c3173610f3ffd652719e24 *src/lp_explicit.h
 1175c90bc8cc00005069b734eacee99c *src/lp_fortify.h
-5012b501ccb10aab9ddabe983938bd50 *src/lp_lib.c
+d3c1263eb1339f02413938cb0b2ae8e6 *src/lp_lib.c
 f61de993e64612611a9552db3d3d682c *src/lp_lib.h
 670b7b1092aa5b134f8e7c22e1952c2b *src/lp_matrix.c
 0e0411fc13742423c3ad9daf4898a207 *src/lp_matrix.h
@@ -86,7 +86,7 @@ ad1867767ee064effa32ea9e880fe632 *src/lusolio.c
 3e67bb130740b63befbb2c6ed01989b8 *src/lusolio.h
 4ad03c261870928d5ae228f2c3b25600 *src/mmio.c
 7ff75e953e30ec3c26bffce310809500 *src/mmio.h
-7d7a35fefee657e82631e36573f62e97 *src/myblas.c
+ebe7dc980ca0d6b95ef9305d91faabac *src/myblas.c
 c8a3b2f20143aae3f8caec9d28055bd2 *src/myblas.h
 b08069fb86201ded0b9dcb009c209d12 *src/sparselib.c
 4bae4e6a2367d3b9ef07b7dae5e608ba *src/sparselib.h
